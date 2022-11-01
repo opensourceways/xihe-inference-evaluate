@@ -6,6 +6,7 @@ type Inference struct {
 	ProjectName ProjectName
 	LastCommit  string
 	UserToken   string
+	User        string
 }
 
 type InferenceIndex struct {

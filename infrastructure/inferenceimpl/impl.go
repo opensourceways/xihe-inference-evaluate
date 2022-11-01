@@ -14,18 +14,19 @@ import (
 const MetaNameInference = "inference"
 
 func NewInference(cfg *Config) inference.Inference {
-	return inferenceImpl{}
+	return inferenceImpl{
+		cfg: cfg,
+	}
 }
 
 type inferenceImpl struct {
+	cfg *Config
 }
 
 func (impl inferenceImpl) Create(infer *domain.Inference) error {
 	cli := client.GetDyna()
-	resource, err, res := client.GetResource()
-	if err != nil {
-		return err
-	}
+	resource := client.GetResource2()
+	res, err := client.GetObj(impl.cfg, infer)
 
 	res.Object["metadata"] = map[string]interface{}{
 		"name":   impl.geneMetaName(&infer.InferenceIndex),
@@ -42,10 +43,7 @@ func (impl inferenceImpl) Create(infer *domain.Inference) error {
 
 func (impl inferenceImpl) ExtendExpiry(infer *domain.InferenceIndex, expiry int64) error {
 	cli := client.GetDyna()
-	resource, err, _ := client.GetResource()
-	if err != nil {
-		return err
-	}
+	resource := client.GetResource2()
 
 	get, err := cli.Resource(resource).Namespace("default").Get(context.TODO(), impl.geneMetaName(infer), metav1.GetOptions{})
 	if err != nil {
