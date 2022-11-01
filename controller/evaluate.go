@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/opensourceways/xihe-inference-evaluate/app"
+	"github.com/opensourceways/xihe-inference-evaluate/domain"
 	"github.com/opensourceways/xihe-inference-evaluate/domain/evaluate"
 )
 
@@ -38,10 +39,12 @@ type EvaluateController struct {
 // @Router /v1/evaluate/project/{type} [post]
 func (ctl *EvaluateController) Create(ctx *gin.Context) {
 	switch ctx.Param("type") {
-	case "custom":
+	case domain.EvaluateTypeCustom:
 		ctl.createCustom(ctx)
-	case "standard":
+
+	case domain.EvaluateTypeStandard:
 		ctl.createStandard(ctx)
+
 	default:
 		ctx.JSON(http.StatusBadRequest, newResponseCodeMsg(
 			errorBadRequestParam, "unknown type",

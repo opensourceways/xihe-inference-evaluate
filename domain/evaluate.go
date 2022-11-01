@@ -2,13 +2,18 @@ package domain
 
 import "strings"
 
+const (
+	EvaluateTypeCustom   = "custom"
+	EvaluateTypeStandard = "standard"
+)
+
 type CustomEvaluate struct {
 	EvaluateIndex
 	AimPath string
 }
 
 func (e *CustomEvaluate) Type() string {
-	return "custom"
+	return EvaluateTypeCustom
 }
 
 type StandardEvaluate struct {
@@ -21,7 +26,7 @@ type StandardEvaluate struct {
 }
 
 func (e *StandardEvaluate) Type() string {
-	return "standard"
+	return EvaluateTypeStandard
 }
 
 type EvaluateScope []string

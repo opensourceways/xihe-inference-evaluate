@@ -9,6 +9,7 @@ import (
 	"github.com/opensourceways/community-robot-lib/utils"
 
 	"github.com/opensourceways/xihe-inference-evaluate/controller"
+	"github.com/opensourceways/xihe-inference-evaluate/domain"
 )
 
 type InferenceCreateOption = controller.InferenceCreateRequest
@@ -73,7 +74,10 @@ func (t InferenceEvaluate) CreateCustomEvaluate(opt *CustomEvaluateCreateOption)
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, t.evaluateURL()+"/custom", bytes.NewBuffer(payload))
+	req, err := http.NewRequest(
+		http.MethodPost, t.evaluateURL()+"/"+domain.EvaluateTypeCustom,
+		bytes.NewBuffer(payload),
+	)
 	if err != nil {
 		return err
 	}
@@ -87,7 +91,10 @@ func (t InferenceEvaluate) CreateStandardEvaluate(opt *StandardEvaluateCreateOpt
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, t.evaluateURL()+"/standard", bytes.NewBuffer(payload))
+	req, err := http.NewRequest(
+		http.MethodPost, t.evaluateURL()+"/"+domain.EvaluateTypeStandard,
+		bytes.NewBuffer(payload),
+	)
 	if err != nil {
 		return err
 	}
