@@ -44,7 +44,7 @@ download_model() {
         # sha[:2], sha[2:4], sha[4:]
         sha=${sha#"oid sha256:"}
         dst=$work_dir/$inference_dir/$(basename $file)
-        $obs_util cp obs://$obs_lfs_path/${sha:0:2}/${sha:2:2}/${sha:4} $dst
+        $obs_util cp obs://$obs_lfs_path/${sha:0:2}/${sha:2:2}/${sha:4} $dst > /dev/null 2>&1
 
         if [ ! -e "$dst" ]; then
             echo "no $dst"

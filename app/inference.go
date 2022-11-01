@@ -33,7 +33,7 @@ func (cmd *InferenceCreateCmd) toInference() *domain.Inference {
 }
 
 type InferenceUpdateCmd struct {
-	domain.Inference
+	domain.InferenceIndex
 
 	Expiry int64
 }

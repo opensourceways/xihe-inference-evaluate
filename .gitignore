@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+xihe-inference-evaluate
 
 # Test binary, built with `go test -c`
 *.test

@@ -1,0 +1,3 @@
+protobuf==3.19.4
+aim==3.8.1
+esdk-obs-python==3.21.4

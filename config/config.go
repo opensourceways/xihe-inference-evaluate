@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/opensourceways/community-robot-lib/utils"
 
+	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/evaluateimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/inferenceimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/watchimpl"
 )
@@ -35,12 +36,14 @@ type ConfigSetDefault interface {
 
 type Config struct {
 	Inference inferenceimpl.Config `json:"inference"  required:"true"`
-	Watch     watchimpl.Config     `json:"watch"  required:"true"`
+	Evaluate  evaluateimpl.Config  `json:"evaluate"   required:"true"`
+	Watch     watchimpl.Config     `json:"watch"      required:"true"`
 }
 
 func (cfg *Config) configItems() []interface{} {
 	return []interface{}{
 		&cfg.Inference,
+		&cfg.Evaluate,
 		&cfg.Watch,
 	}
 }
@@ -52,6 +55,8 @@ func (cfg *Config) SetDefault() {
 			f.SetDefault()
 		}
 	}
+
+	cfg.Evaluate.OBS = cfg.Inference.OBS
 }
 
 func (cfg *Config) Validate() error {

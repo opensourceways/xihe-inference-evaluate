@@ -14,6 +14,7 @@ import (
 	"github.com/opensourceways/xihe-inference-evaluate/config"
 	"github.com/opensourceways/xihe-inference-evaluate/controller"
 	"github.com/opensourceways/xihe-inference-evaluate/docs"
+	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/evaluateimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/inferenceimpl"
 )
 
@@ -40,12 +41,17 @@ func setRouter(engine *gin.Engine, cfg *config.Config) {
 	docs.SwaggerInfo.Title = "xihe"
 
 	inference := inferenceimpl.NewInference(&cfg.Inference)
+	evaluate := evaluateimpl.NewEvaluate(&cfg.Evaluate)
 
 	v1 := engine.Group(docs.SwaggerInfo.BasePath)
 	{
 		controller.AddRouterForInferenceController(
 			v1, inference,
 		)
+		controller.AddRouterForEvaluateController(
+			v1, evaluate,
+		)
+
 	}
 
 	engine.UseRawPath = true
