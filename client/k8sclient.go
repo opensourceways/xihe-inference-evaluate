@@ -1,13 +1,10 @@
 package client
 
 import (
-	"io/ioutil"
 	"log"
 	"os/user"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
@@ -77,30 +74,12 @@ func GetK8sConfig() *rest.Config {
 	return k8sConfig
 }
 
-func GetResource() (schema.GroupVersionResource, error, *unstructured.Unstructured) {
-	k, err, res := Resource()
-	if err != nil {
-		return schema.GroupVersionResource{}, err, nil
+func GetResource2() schema.GroupVersionResource {
+	k := schema.GroupVersionKind{
+		Group:   "cs.opensourceways.com",
+		Version: "v1alpha1",
+		Kind:    "CodeServer",
 	}
-
-	mapping, err := GetrestMapper().RESTMapping(k.GroupKind(), k.Version)
-	if err != nil {
-		return schema.GroupVersionResource{}, err, nil
-	}
-
-	return mapping.Resource, nil, res
-}
-
-func Resource() (kind *schema.GroupVersionKind, err error, _ *unstructured.Unstructured) {
-	var yamldata []byte
-	yamldata, err = ioutil.ReadFile("crd-resource.yaml")
-	if err != nil {
-		return nil, err, nil
-	}
-	obj := &unstructured.Unstructured{}
-	_, kind, err = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme).Decode(yamldata, nil, obj)
-	if err != nil {
-		return nil, err, nil
-	}
-	return kind, nil, obj
+	mapping, _ := GetrestMapper().RESTMapping(k.GroupKind(), k.Version)
+	return mapping.Resource
 }

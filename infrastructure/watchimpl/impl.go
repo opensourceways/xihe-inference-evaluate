@@ -2,6 +2,7 @@ package watchimpl
 
 import (
 	"context"
+	"github.com/opensourceways/xihe-inference-evaluate/config"
 	"sync"
 	"time"
 
@@ -53,14 +54,14 @@ type StatusDetail struct {
 	ErrorMsg  string `json:"error_msg,omitempty"`
 }
 
-func NewWatcher(cfg *Config) *Watcher {
-	resource, _, _ := client.GetResource()
+func NewWatcher(cfg *config.Config) *Watcher {
+	resource := client.GetResource2()
 	return &Watcher{
 		res:      client.GetClient(),
 		config:   client.GetK8sConfig(),
 		dym:      client.GetDyna(),
 		resource: resource,
-		nConfig:  cfg,
+		nConfig:  &cfg.Watch,
 	}
 }
 

@@ -70,7 +70,7 @@ func main() {
 	controller.Init(log)
 
 	// watcher
-	w := watchimpl.NewWatcher(&cfg.Watch)
+	w := watchimpl.NewWatcher(cfg)
 	go w.Run()
 	defer w.Exit()
 
