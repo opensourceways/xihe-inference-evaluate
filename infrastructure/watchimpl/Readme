@@ -1,0 +1,2 @@
+implement watching resource and notify the result
+get metadata from crd to pass the grpc

@@ -1,0 +1,49 @@
+info:
+  contact: {}
+paths:
+  /v1/inference/project:
+    post:
+      consumes:
+      - application/json
+      description: create inference
+      responses:
+        "201":
+          description: ""
+        "400":
+          description: Bad Request
+          schema:
+            type: bad_request_body
+        "401":
+          description: Unauthorized
+          schema:
+            type: bad_request_param
+        "500":
+          description: Internal Server Error
+          schema:
+            type: system_error
+      summary: Create
+      tags:
+      - Inference
+    put:
+      consumes:
+      - application/json
+      description: extend expiry for inference
+      responses:
+        "202":
+          description: ""
+        "400":
+          description: Bad Request
+          schema:
+            type: bad_request_body
+        "401":
+          description: Unauthorized
+          schema:
+            type: bad_request_param
+        "500":
+          description: Internal Server Error
+          schema:
+            type: system_error
+      summary: ExtendExpiry
+      tags:
+      - Inference
+swagger: "2.0"
