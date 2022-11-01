@@ -21,7 +21,7 @@ def _parse_pretrain(path):
     if len(v) < 3:
         raise(_InvalidPretrain("invalid pretrain path"))
 
-    return _Pretrain(v[0], v[1], s)
+    return _Pretrain(v[0], v[1], "/".join(v[1:]))
 
 
 def _load_config(path):

@@ -28,7 +28,7 @@ cd $work_dir
 download_model() {
     local owner=$1
     local repo=$2
-    local file=$repo/$3
+    local file=$3
 
     git clone $repo_url/${owner}/${repo}
 
