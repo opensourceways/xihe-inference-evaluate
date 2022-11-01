@@ -85,4 +85,10 @@ fi
 # run
 cd $inference_dir
 
+f=requirements.txt
+if [ -e "$f" -a -s "$f" ]; then
+    pip install --upgrade -i https://pypi.tuna.tsinghua.edu.cn/simple pip
+    pip install -r ./$f -i https://pypi.tuna.tsinghua.edu.cn/simple
+fi
+
 python3 ./$app
