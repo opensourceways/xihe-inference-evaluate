@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# set -euo pipefail
+set -euox pipefail
 
 gitlab_endpoint=${GITLAB_ENDPOINT}
 xihe_user=${XIHE_USER}
@@ -15,7 +15,7 @@ obs_util=${OBS_UTIL_PATH}
 obs_lfs_path=${OBS_BUCKET}/${OBS_LFS_PATH} #$OBS_LFS_PATH has no suffix of /.
 
 inference_dir=$project_name/inference
-repo_url=http://${xihe_user}:${xihe_user_token}@${gitlab_endpoint}
+repo_url=http://${xihe_user}:${xihe_user_token}@${gitlab_endpoint#"http://"}
 app=app.py
 
 # workspace
