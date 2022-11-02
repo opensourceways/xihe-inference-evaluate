@@ -15,7 +15,6 @@ import (
 type InferenceCreateOption = controller.InferenceCreateRequest
 type InferenceUpdateOption = controller.InferenceUpdateRequest
 
-type EvaluateUpdateOption = controller.EvaluateUpdateRequest
 type CustomEvaluateCreateOption = controller.CustomEvaluateCreateRequest
 type StandardEvaluateCreateOption = controller.StandardEvaluateCreateRequest
 
@@ -95,20 +94,6 @@ func (t InferenceEvaluate) CreateStandardEvaluate(opt *StandardEvaluateCreateOpt
 		http.MethodPost, t.evaluateURL()+"/"+domain.EvaluateTypeStandard,
 		bytes.NewBuffer(payload),
 	)
-	if err != nil {
-		return err
-	}
-
-	return t.forwardTo(req, nil)
-}
-
-func (t InferenceEvaluate) ExtendExpiryOfEvaluate(opt *EvaluateUpdateOption) error {
-	payload, err := utils.JsonMarshal(&opt)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest(http.MethodPut, t.evaluateURL(), bytes.NewBuffer(payload))
 	if err != nil {
 		return err
 	}
