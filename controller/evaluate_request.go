@@ -27,7 +27,8 @@ func (req *EvaluateIndex) toIndex() (index app.EvaluateIndex, err error) {
 type CustomEvaluateCreateRequest struct {
 	EvaluateIndex
 
-	AimPath string `json:"aim_path"`
+	AimPath      string `json:"aim_path"`
+	SurvivalTime int    `json:"survival_time"`
 }
 
 func (req *CustomEvaluateCreateRequest) toCmd() (
@@ -38,6 +39,7 @@ func (req *CustomEvaluateCreateRequest) toCmd() (
 	}
 
 	cmd.AimPath = req.AimPath
+	cmd.SurvivalTime = req.SurvivalTime
 
 	err = cmd.Validate()
 
@@ -47,7 +49,8 @@ func (req *CustomEvaluateCreateRequest) toCmd() (
 type StandardEvaluateCreateRequest struct {
 	EvaluateIndex
 
-	LogPath string `json:"log_path"`
+	LogPath      string `json:"log_path"`
+	SurvivalTime int    `json:"survival_time"`
 
 	MomentumScope     domain.EvaluateScope `json:"momentum_scope"`
 	BatchSizeScope    domain.EvaluateScope `json:"batch_size_scope"`
@@ -62,27 +65,10 @@ func (req *StandardEvaluateCreateRequest) toCmd() (
 	}
 
 	cmd.LogPath = req.LogPath
+	cmd.SurvivalTime = req.SurvivalTime
 	cmd.MomentumScope = req.MomentumScope
 	cmd.BatchSizeScope = req.BatchSizeScope
 	cmd.LearningRateScope = req.LearningRateScope
-
-	err = cmd.Validate()
-
-	return
-}
-
-type EvaluateUpdateRequest struct {
-	EvaluateIndex
-
-	Expiry int64 `json:"expiry"`
-}
-
-func (req *EvaluateUpdateRequest) toCmd() (cmd app.EvaluateUpdateCmd, err error) {
-	if cmd.EvaluateIndex, err = req.EvaluateIndex.toIndex(); err != nil {
-		return
-	}
-
-	cmd.Expiry = req.Expiry
 
 	err = cmd.Validate()
 

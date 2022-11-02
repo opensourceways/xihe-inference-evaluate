@@ -9,7 +9,8 @@ const (
 
 type CustomEvaluate struct {
 	EvaluateIndex
-	AimPath string
+	AimPath      string
+	SurvivalTime int
 }
 
 func (e *CustomEvaluate) Type() string {
@@ -20,6 +21,7 @@ type StandardEvaluate struct {
 	EvaluateIndex
 
 	LogPath           string
+	SurvivalTime      int
 	MomentumScope     EvaluateScope
 	BatchSizeScope    EvaluateScope
 	LearningRateScope EvaluateScope

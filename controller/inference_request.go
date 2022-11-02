@@ -25,9 +25,10 @@ func (req *InferenceIndex) toIndex() (index app.InferenceIndex, err error) {
 type InferenceCreateRequest struct {
 	InferenceIndex
 
-	UserToken   string `json:"token"`
-	LastCommit  string `json:"last_commit"`
-	ProjectName string `json:"project_name"`
+	UserToken    string `json:"token"`
+	LastCommit   string `json:"last_commit"`
+	ProjectName  string `json:"project_name"`
+	SurvivalTime int    `json:"survival_time"`
 }
 
 func (req *InferenceCreateRequest) toCmd() (
@@ -52,7 +53,9 @@ func (req *InferenceCreateRequest) toCmd() (
 type InferenceUpdateRequest struct {
 	InferenceIndex
 
-	Expiry int64 `json:"expiry"`
+	// TimeToExtend stands for the time in seconds to
+	// extend the survival time of instance.
+	TimeToExtend int `json:"time_to_extend"`
 }
 
 func (req *InferenceUpdateRequest) toCmd() (cmd app.InferenceUpdateCmd, err error) {
@@ -60,7 +63,7 @@ func (req *InferenceUpdateRequest) toCmd() (cmd app.InferenceUpdateCmd, err erro
 		return
 	}
 
-	cmd.Expiry = req.Expiry
+	cmd.TimeToExtend = req.TimeToExtend
 
 	err = cmd.Validate()
 

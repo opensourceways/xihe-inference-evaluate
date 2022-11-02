@@ -19,7 +19,8 @@ func (cmd *InferenceCreateCmd) Validate() error {
 		index.Id == "" ||
 		cmd.LastCommit == "" ||
 		cmd.ProjectName == nil ||
-		cmd.UserToken == ""
+		cmd.UserToken == "" ||
+		cmd.SurvivalTime <= 0
 
 	if b {
 		return errors.New("invalid cmd")
@@ -35,7 +36,7 @@ func (cmd *InferenceCreateCmd) toInference() *domain.Inference {
 type InferenceUpdateCmd struct {
 	domain.InferenceIndex
 
-	Expiry int64
+	TimeToExtend int
 }
 
 func (cmd *InferenceUpdateCmd) Validate() error {
@@ -44,7 +45,7 @@ func (cmd *InferenceUpdateCmd) Validate() error {
 	b := index.Project.Id == "" ||
 		index.Project.Owner == nil ||
 		index.Id == "" ||
-		cmd.Expiry <= 0
+		cmd.TimeToExtend <= 0
 
 	if b {
 		return errors.New("invalid cmd")
@@ -55,7 +56,7 @@ func (cmd *InferenceUpdateCmd) Validate() error {
 
 type InferenceService interface {
 	Create(*InferenceCreateCmd) error
-	ExtendExpiry(*InferenceUpdateCmd) error
+	ExtendSurvivalTime(*InferenceUpdateCmd) error
 }
 
 func NewInferenceService(
@@ -74,6 +75,6 @@ func (s inferenceService) Create(cmd *InferenceCreateCmd) error {
 	return s.manager.Create(cmd.toInference())
 }
 
-func (s inferenceService) ExtendExpiry(cmd *InferenceUpdateCmd) error {
-	return s.manager.ExtendExpiry(&cmd.InferenceIndex, cmd.Expiry)
+func (s inferenceService) ExtendSurvivalTime(cmd *InferenceUpdateCmd) error {
+	return s.manager.ExtendSurvivalTime(&cmd.InferenceIndex, cmd.TimeToExtend)
 }

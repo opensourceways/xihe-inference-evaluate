@@ -40,7 +40,7 @@ func (impl inferenceImpl) Create(infer *domain.Inference) error {
 	return nil
 }
 
-func (impl inferenceImpl) ExtendExpiry(infer *domain.InferenceIndex, expiry int64) error {
+func (impl inferenceImpl) ExtendSurvivalTime(infer *domain.InferenceIndex, timeToExtend int) error {
 	cli := client.GetDyna()
 	resource, err, _ := client.GetResource()
 	if err != nil {
@@ -55,7 +55,7 @@ func (impl inferenceImpl) ExtendExpiry(infer *domain.InferenceIndex, expiry int6
 	if sp, ok := get.Object["spec"]; ok {
 		if spc, ok := sp.(map[string]interface{}); ok {
 			spc["add"] = true
-			spc["recycleAfterSeconds"] = expiry
+			spc["recycleAfterSeconds"] = timeToExtend
 		}
 	}
 	_, err = cli.Resource(resource).Namespace("default").Update(context.TODO(), get, metav1.UpdateOptions{})

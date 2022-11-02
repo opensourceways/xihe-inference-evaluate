@@ -88,7 +88,7 @@ func (ctl *InferenceController) ExtendExpiry(ctx *gin.Context) {
 		return
 	}
 
-	if err = ctl.s.ExtendExpiry(&cmd); err != nil {
+	if err = ctl.s.ExtendSurvivalTime(&cmd); err != nil {
 		ctl.sendRespWithInternalError(ctx, newResponseError(err))
 
 		return

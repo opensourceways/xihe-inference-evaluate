@@ -14,6 +14,5 @@ func NewEvaluate(cfg *Config) evaluate.Evaluate {
 type evaluateImpl struct {
 }
 
-func (impl *evaluateImpl) CreateCustom(*domain.CustomEvaluate) error       { return nil }
-func (impl *evaluateImpl) CreateStandard(*domain.StandardEvaluate) error   { return nil }
-func (impl *evaluateImpl) ExtendExpiry(*domain.EvaluateIndex, int64) error { return nil }
+func (impl *evaluateImpl) CreateCustom(*domain.CustomEvaluate) error     { return nil }
+func (impl *evaluateImpl) CreateStandard(*domain.StandardEvaluate) error { return nil }

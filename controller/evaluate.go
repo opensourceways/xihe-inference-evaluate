@@ -19,7 +19,6 @@ func AddRouterForEvaluateController(
 	}
 
 	rg.POST("/v1/evaluate/project/:type", ctl.Create)
-	rg.PUT("/v1/evaluate/project", ctl.ExtendExpiry)
 }
 
 type EvaluateController struct {
@@ -96,41 +95,6 @@ func (ctl *EvaluateController) createStandard(ctx *gin.Context) {
 	}
 
 	if err = ctl.s.CreateStandard(&cmd); err != nil {
-		ctl.sendRespWithInternalError(ctx, newResponseError(err))
-
-		return
-	}
-
-	ctx.JSON(http.StatusCreated, newResponseData("successfully"))
-}
-
-// @Summary ExtendExpiry
-// @Description extend expiry for evaluate
-// @Tags  Evaluate
-// @Accept json
-// @Success 202
-// @Failure 400 bad_request_body    can't parse request body
-// @Failure 401 bad_request_param   some parameter of body is invalid
-// @Failure 500 system_error        system error
-// @Router /v1/evaluate/project [put]
-func (ctl *EvaluateController) ExtendExpiry(ctx *gin.Context) {
-	req := EvaluateUpdateRequest{}
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, respBadRequestBody)
-
-		return
-	}
-
-	cmd, err := req.toCmd()
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, newResponseCodeError(
-			errorBadRequestParam, err,
-		))
-
-		return
-	}
-
-	if err = ctl.s.ExtendExpiry(&cmd); err != nil {
 		ctl.sendRespWithInternalError(ctx, newResponseError(err))
 
 		return

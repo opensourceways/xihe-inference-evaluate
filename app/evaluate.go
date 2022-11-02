@@ -18,7 +18,8 @@ func (cmd *CustomEvaluateCreateCmd) Validate() error {
 		index.Project.Owner == nil ||
 		index.TrainingId == "" ||
 		index.Id == "" ||
-		cmd.AimPath == ""
+		cmd.AimPath == "" ||
+		cmd.SurvivalTime <= 0
 
 	if b {
 		return errors.New("invalid cmd")
@@ -41,7 +42,8 @@ func (cmd *StandardEvaluateCreateCmd) Validate() error {
 		index.Project.Owner == nil ||
 		index.TrainingId == "" ||
 		index.Id == "" ||
-		cmd.LogPath == ""
+		cmd.LogPath == "" ||
+		cmd.SurvivalTime <= 0
 
 	if b {
 		return errors.New("invalid cmd")
@@ -54,33 +56,9 @@ func (cmd *StandardEvaluateCreateCmd) toEvaluate() *domain.StandardEvaluate {
 	return (*domain.StandardEvaluate)(cmd)
 }
 
-// extend
-type EvaluateUpdateCmd struct {
-	domain.EvaluateIndex
-
-	Expiry int64
-}
-
-func (cmd *EvaluateUpdateCmd) Validate() error {
-	index := &cmd.EvaluateIndex
-
-	b := index.Project.Id == "" ||
-		index.Project.Owner == nil ||
-		index.Id == "" ||
-		index.TrainingId == "" ||
-		cmd.Expiry <= 0
-
-	if b {
-		return errors.New("invalid cmd")
-	}
-
-	return nil
-}
-
 type EvaluateService interface {
 	CreateCustom(*CustomEvaluateCreateCmd) error
 	CreateStandard(*StandardEvaluateCreateCmd) error
-	ExtendExpiry(*EvaluateUpdateCmd) error
 }
 
 func NewEvaluateService(
@@ -101,8 +79,4 @@ func (s evaluateService) CreateCustom(cmd *CustomEvaluateCreateCmd) error {
 
 func (s evaluateService) CreateStandard(cmd *StandardEvaluateCreateCmd) error {
 	return s.manager.CreateStandard(cmd.toEvaluate())
-}
-
-func (s evaluateService) ExtendExpiry(cmd *EvaluateUpdateCmd) error {
-	return s.manager.ExtendExpiry(&cmd.EvaluateIndex, cmd.Expiry)
 }
