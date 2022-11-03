@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
-	v1 "github.com/qinsheng99/crdcode/api/v1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,9 +18,12 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 
+	v1 "github.com/opensourceways/code-server-operator/api/v1alpha1"
 	rpcclient "github.com/opensourceways/xihe-grpc-protocol/grpc/client"
+	"github.com/opensourceways/xihe-grpc-protocol/grpc/evaluate"
 	"github.com/opensourceways/xihe-grpc-protocol/grpc/inference"
 	"github.com/opensourceways/xihe-inference-evaluate/client"
+	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/evaluateimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/inferenceimpl"
 )
 
@@ -103,6 +105,8 @@ func (w *Watcher) dispatcher(res v1.CodeServer) {
 	switch res.Labels["type"] {
 	case inferenceimpl.MetaNameInference:
 		w.HandleInference(res.ObjectMeta.Labels, status)
+	case evaluateimpl.MetaNameEvaluate:
+		w.HandleEvaluate(res.ObjectMeta.Labels, status)
 	}
 }
 
@@ -149,8 +153,30 @@ func (w *Watcher) HandleInference(labels map[string]string, status StatusDetail)
 		AccessURL: status.AccessUrl,
 	}
 	if err = cli.SetInferenceInfo(&index, &info); err != nil {
-		logrus.Errorf("call rpc error:%s", err.Error())
+		logrus.Errorf("call inference rpc error:%s", err.Error())
 	}
+
+}
+
+func (w *Watcher) HandleEvaluate(labels map[string]string, status StatusDetail) {
+	cli, err := rpcclient.NewEvaluateClient(w.nConfig.EvaluateEndpoint)
+	if err != nil {
+		logrus.Error("new evaluate rpc client error:", err.Error())
+	}
+	index := evaluate.EvaluateIndex{
+		Id:         labels["id"],
+		User:       labels["user"],
+		ProjectId:  labels["project_id"],
+		TrainingID: labels["training_id"],
+	}
+	info := evaluate.EvaluateInfo{
+		Error:     status.ErrorMsg,
+		AccessURL: status.AccessUrl,
+	}
+	if err = cli.SetEvaluateInfo(&index, &info); err != nil {
+		logrus.Error("call evaluate rpc error:", err.Error())
+	}
+
 }
 
 func (w *Watcher) crdConfig() cache.SharedIndexInformer {

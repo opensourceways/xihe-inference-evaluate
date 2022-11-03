@@ -1,44 +1,17 @@
 package inferenceimpl
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"html/template"
-	"io/ioutil"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 
 	"github.com/opensourceways/xihe-inference-evaluate/client"
 	"github.com/opensourceways/xihe-inference-evaluate/domain"
 	"github.com/opensourceways/xihe-inference-evaluate/domain/inference"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const MetaNameInference = "inference"
-
-type CrdData struct {
-	Group          string
-	Version        string
-	Name           string
-	NameSpace      string
-	Image          string
-	GitlabEndPoint string
-	XiheUser       string
-	XiheUserToken  string
-	ProjectName    string
-	LastCommit     string
-	ObsAk          string
-	ObsSk          string
-	ObsEndPoint    string
-	ObsUtilPath    string
-	ObsBucket      string
-	ObsLfsPath     string
-	StorageSize    int
-	RecycleSeconds int
-	Labels         map[string]string
-}
 
 func NewInference(cfg *Config) inference.Inference {
 	return inferenceImpl{
@@ -54,9 +27,9 @@ func (impl inferenceImpl) Create(infer *domain.Inference) error {
 	cli := client.GetDyna()
 	resource := client.GetResource2()
 
-	res, err := impl.GetObj(impl.cfg, infer)
+	res, err := impl.GetObj(infer)
 
-	dr := cli.Resource(resource).Namespace("default")
+	dr := cli.Resource(resource).Namespace(client.CrdNameSpace)
 	_, err = dr.Create(context.TODO(), res, metav1.CreateOptions{})
 	if err != nil {
 		return err
@@ -68,7 +41,7 @@ func (impl inferenceImpl) ExtendSurvivalTime(infer *domain.InferenceIndex, timeT
 	cli := client.GetDyna()
 	resource := client.GetResource2()
 
-	get, err := cli.Resource(resource).Namespace("default").Get(context.TODO(), impl.geneMetaName(infer), metav1.GetOptions{})
+	get, err := cli.Resource(resource).Namespace(client.CrdNameSpace).Get(context.TODO(), impl.geneMetaName(infer), metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -79,7 +52,7 @@ func (impl inferenceImpl) ExtendSurvivalTime(infer *domain.InferenceIndex, timeT
 			spc["recycleAfterSeconds"] = timeToExtend
 		}
 	}
-	_, err = cli.Resource(resource).Namespace("default").Update(context.TODO(), get, metav1.UpdateOptions{})
+	_, err = cli.Resource(resource).Namespace(client.CrdNameSpace).Update(context.TODO(), get, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -100,51 +73,30 @@ func (impl inferenceImpl) GeneLabels(infer *domain.Inference) map[string]string 
 	return m
 }
 
-func (impl inferenceImpl) GetObj(cfg *Config, infer *domain.Inference) (*unstructured.Unstructured, error) {
+func (impl inferenceImpl) GetObj(infer *domain.Inference) (*unstructured.Unstructured, error) {
 	name := impl.geneMetaName(&infer.InferenceIndex)
 	labels := impl.GeneLabels(infer)
 
-	txtStr, err := ioutil.ReadFile("./crd-resource.yaml")
-	if err != nil {
-		return nil, err
-	}
-
-	tmpl, err := template.New("crd").Parse(string(txtStr))
-	if err != nil {
-		return nil, err
-	}
-
-	var data = &CrdData{
+	var data = &client.CrdData{
 		Group:          client.CrdGroup,
 		Version:        client.CrdVersion,
 		Name:           name,
-		NameSpace:      "default",
-		Image:          cfg.Image,
-		GitlabEndPoint: cfg.GitlabEndpoint,
+		NameSpace:      client.CrdNameSpace,
+		Image:          impl.cfg.Image,
+		GitlabEndPoint: impl.cfg.GitlabEndpoint,
 		XiheUser:       infer.Project.Owner.Account(),
 		XiheUserToken:  infer.UserToken,
 		ProjectName:    infer.ProjectName.ProjectName(),
 		LastCommit:     infer.LastCommit,
-		ObsAk:          cfg.OBS.AccessKey,
-		ObsSk:          cfg.OBS.SecretKey,
-		ObsEndPoint:    cfg.OBS.Endpoint,
-		ObsUtilPath:    cfg.OBS.OBSUtilPath,
-		ObsBucket:      cfg.OBS.Bucket,
-		ObsLfsPath:     cfg.OBS.LFSPath,
+		ObsAk:          impl.cfg.OBS.AccessKey,
+		ObsSk:          impl.cfg.OBS.SecretKey,
+		ObsEndPoint:    impl.cfg.OBS.Endpoint,
+		ObsUtilPath:    impl.cfg.OBS.OBSUtilPath,
+		ObsBucket:      impl.cfg.OBS.Bucket,
+		ObsLfsPath:     impl.cfg.OBS.LFSPath,
 		StorageSize:    10,
 		RecycleSeconds: infer.SurvivalTime,
 		Labels:         labels,
 	}
-
-	buf := new(bytes.Buffer)
-	if err := tmpl.Execute(buf, data); err != nil {
-		return nil, err
-	}
-
-	obj := &unstructured.Unstructured{}
-	_, _, err = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme).Decode(buf.Bytes(), nil, obj)
-	if err != nil {
-		return nil, err
-	}
-	return obj, nil
+	return client.GetObj(data)
 }
