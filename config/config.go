@@ -2,10 +2,11 @@ package config
 
 import (
 	"github.com/opensourceways/community-robot-lib/utils"
-	"github.com/opensourceways/xihe-inference-evaluate/client"
+
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/evaluateimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/inferenceimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/watchimpl"
+	"github.com/opensourceways/xihe-inference-evaluate/k8sclient"
 )
 
 func LoadConfig(path string, cfg interface{}) error {
@@ -38,7 +39,7 @@ type Config struct {
 	Inference inferenceimpl.Config `json:"inference"  required:"true"`
 	Evaluate  evaluateimpl.Config  `json:"evaluate"   required:"true"`
 	Watch     watchimpl.Config     `json:"watch"      required:"true"`
-	K8sClient client.Config        `json:"k8SClient"  required:"true"`
+	K8sClient k8sclient.Config     `json:"k8SClient"  required:"true"`
 }
 
 func (cfg *Config) configItems() []interface{} {

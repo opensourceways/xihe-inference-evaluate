@@ -6,10 +6,10 @@ import (
 
 	"github.com/opensourceways/community-robot-lib/logrusutil"
 	liboptions "github.com/opensourceways/community-robot-lib/options"
-	"github.com/opensourceways/xihe-inference-evaluate/client"
 	"github.com/opensourceways/xihe-inference-evaluate/config"
 	"github.com/opensourceways/xihe-inference-evaluate/controller"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/watchimpl"
+	"github.com/opensourceways/xihe-inference-evaluate/k8sclient"
 	"github.com/opensourceways/xihe-inference-evaluate/server"
 	"github.com/sirupsen/logrus"
 )
@@ -60,7 +60,7 @@ func main() {
 		logrus.Fatalf("load config, err:%s", err.Error())
 	}
 
-	err := client.Init(&cfg.K8sClient)
+	err := k8sclient.Init(&cfg.K8sClient)
 	if err != nil {
 		logrus.Fatalf("k8s client init, err:%s", err.Error())
 	}

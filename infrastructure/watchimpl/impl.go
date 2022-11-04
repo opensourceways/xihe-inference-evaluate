@@ -6,6 +6,10 @@ import (
 	"time"
 
 	"github.com/goccy/go-json"
+	v1 "github.com/opensourceways/code-server-operator/api/v1alpha1"
+	rpcclient "github.com/opensourceways/xihe-grpc-protocol/grpc/client"
+	"github.com/opensourceways/xihe-grpc-protocol/grpc/evaluate"
+	"github.com/opensourceways/xihe-grpc-protocol/grpc/inference"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,13 +22,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 
-	v1 "github.com/opensourceways/code-server-operator/api/v1alpha1"
-	rpcclient "github.com/opensourceways/xihe-grpc-protocol/grpc/client"
-	"github.com/opensourceways/xihe-grpc-protocol/grpc/evaluate"
-	"github.com/opensourceways/xihe-grpc-protocol/grpc/inference"
-	"github.com/opensourceways/xihe-inference-evaluate/client"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/evaluateimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/inferenceimpl"
+	"github.com/opensourceways/xihe-inference-evaluate/k8sclient"
 )
 
 var serverUnusable = map[v1.ServerConditionType]struct{}{
@@ -56,11 +56,11 @@ type StatusDetail struct {
 }
 
 func NewWatcher(cfg *Config) *Watcher {
-	resource := client.GetResource()
+	resource := k8sclient.GetResource()
 	return &Watcher{
-		res:      client.GetClient(),
-		config:   client.GetK8sConfig(),
-		dym:      client.GetDyna(),
+		res:      k8sclient.GetClient(),
+		config:   k8sclient.GetK8sConfig(),
+		dym:      k8sclient.GetDyna(),
 		resource: resource,
 		nConfig:  cfg,
 	}

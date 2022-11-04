@@ -3,15 +3,14 @@ package inferenceimpl
 import (
 	"errors"
 	"path/filepath"
+
+	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/config"
 )
 
 type Config struct {
-	OBS            OBSConfig `json:"obs"              required:"true"`
-	Image          string    `json:"image"            required:"true"`
-	GitlabEndpoint string    `json:"gitlab_endpiont"  required:"true"`
-	CrdNamespace   string    `json:"crd_namespace"    required:"true"`
-	CrdCpu         string    `json:"crd_cpu"          required:"true"`
-	CrdMemory      string    `json:"crd_memory"       required:"true"`
+	OBS            OBSConfig        `json:"obs"              required:"true"`
+	CRD            config.CRDConfig `json:"crd"              required:"true"`
+	GitlabEndpoint string           `json:"gitlab_endpiont"  required:"true"`
 }
 
 type OBSConfig struct {
