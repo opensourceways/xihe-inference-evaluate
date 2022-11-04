@@ -36,10 +36,10 @@ type ConfigSetDefault interface {
 }
 
 type Config struct {
-	Inference inferenceimpl.Config `json:"inference"  required:"true"`
-	Evaluate  evaluateimpl.Config  `json:"evaluate"   required:"true"`
 	Watch     watchimpl.Config     `json:"watch"      required:"true"`
-	K8sClient k8sclient.Config     `json:"k8SClient"  required:"true"`
+	Evaluate  evaluateimpl.Config  `json:"evaluate"   required:"true"`
+	Inference inferenceimpl.Config `json:"inference"  required:"true"`
+	K8sClient k8sclient.Config     `json:"k8S"        required:"true"`
 }
 
 func (cfg *Config) configItems() []interface{} {

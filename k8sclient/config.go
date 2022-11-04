@@ -6,3 +6,9 @@ type Config struct {
 	Version        string `json:"version"          required:"true"`
 	KubeConfigFile string `json:"kube_config_file" required:"true"`
 }
+
+func (cfg *Config) SetDefault() {
+	if cfg.KubeConfigFile == "" {
+		cfg.KubeConfigFile = "~/.kube/config"
+	}
+}
