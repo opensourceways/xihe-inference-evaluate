@@ -23,7 +23,7 @@ func MetaName() string {
 	return metaNameEvaluate
 }
 
-func NewEvaluate(cfg *Config) (evaluate.Evaluate, error) {
+func NewEvaluate(cfg *Config, k8sConfig k8sclient.Config) (evaluate.Evaluate, error) {
 	txtStr, err := ioutil.ReadFile(cfg.CRD.TemplateFile)
 	if err != nil {
 		return nil, err
@@ -36,12 +36,14 @@ func NewEvaluate(cfg *Config) (evaluate.Evaluate, error) {
 
 	return &evaluateImpl{
 		cfg:         cfg,
+		k8sConfig:   k8sConfig,
 		crdTemplate: tmpl,
 	}, nil
 }
 
 type evaluateImpl struct {
 	cfg         *Config
+	k8sConfig   k8sclient.Config
 	crdTemplate *template.Template
 }
 
@@ -57,22 +59,17 @@ func (impl *evaluateImpl) CreateCustom(ce *domain.CustomEvaluate) error {
 	s := impl.evaluateIndexString(&ce.EvaluateIndex)
 	logrus.Debugf("receive custom evaluate for %s.", s)
 
-	cli := k8sclient.GetDyna()
-	resource := k8sclient.GetResource()
-
 	res := new(unstructured.Unstructured)
-
 	if err := impl.getCustomObj(ce, res); err != nil {
 		return err
 	}
 
-	dr := cli.Resource(resource).Namespace(impl.cfg.CRD.CRDNamespace)
-
-	_, err := dr.Create(context.TODO(), res, metav1.CreateOptions{})
+	ns := k8sclient.GetNamespace(impl.cfg.CRD.CRDNamespace)
+	_, err := ns.Create(context.TODO(), res, metav1.CreateOptions{})
 
 	logrus.Debugf(
-		"gen crd for custom evaluate:%s in %s/%s, err:%v.",
-		s, resource, impl.cfg.CRD.CRDNamespace, err,
+		"gen crd for custom evaluate:%s in %s, err:%v.",
+		s, impl.cfg.CRD.CRDNamespace, err,
 	)
 
 	return err
@@ -82,22 +79,18 @@ func (impl *evaluateImpl) CreateStandard(se *domain.StandardEvaluate) error {
 	s := impl.evaluateIndexString(&se.EvaluateIndex)
 	logrus.Debugf("receive standard evaluate for %s.", s)
 
-	cli := k8sclient.GetDyna()
-	resource := k8sclient.GetResource()
-
 	res := new(unstructured.Unstructured)
 
 	if err := impl.getStandardObj(se, res); err != nil {
 		return err
 	}
 
-	dr := cli.Resource(resource).Namespace(impl.cfg.CRD.CRDNamespace)
-
-	_, err := dr.Create(context.TODO(), res, metav1.CreateOptions{})
+	ns := k8sclient.GetNamespace(impl.cfg.CRD.CRDNamespace)
+	_, err := ns.Create(context.TODO(), res, metav1.CreateOptions{})
 
 	logrus.Debugf(
-		"gen crd for standard evaluate:%s in %s/%s, err:%v.",
-		s, resource, impl.cfg.CRD.CRDNamespace, err,
+		"gen crd for standard evaluate:%s in %s, err:%v.",
+		s, impl.cfg.CRD.CRDNamespace, err,
 	)
 
 	return err
@@ -118,70 +111,61 @@ func (impl *evaluateImpl) geneLabels(eva *domain.EvaluateIndex) map[string]strin
 }
 
 func (impl *evaluateImpl) getCustomObj(
-	ceva *domain.CustomEvaluate,
+	ce *domain.CustomEvaluate,
 	obj *unstructured.Unstructured,
 ) error {
-	name := impl.geneMetaName(&ceva.EvaluateIndex)
-	labels := impl.geneLabels(&ceva.EvaluateIndex)
-	crd := &impl.cfg.CRD
+	data := new(crdData)
+	impl.genCrdData(data, &ce.EvaluateIndex, ce.SurvivalTime)
 
-	data := crdData{
-		Group:          k8sclient.Cfg.Group,
-		Version:        k8sclient.Cfg.Version,
-		CodeServer:     k8sclient.Cfg.Kind,
-		Name:           name,
-		NameSpace:      crd.CRDNamespace,
-		Image:          crd.CRDImage,
-		ObsAk:          impl.cfg.OBS.AccessKey,
-		ObsSk:          impl.cfg.OBS.SecretKey,
-		ObsEndPoint:    impl.cfg.OBS.Endpoint,
-		ObsUtilPath:    impl.cfg.OBS.OBSUtilPath,
-		ObsBucket:      impl.cfg.OBS.Bucket,
-		StorageSize:    10,
-		RecycleSeconds: ceva.SurvivalTime,
-		CPU:            crd.CRDCpuString(),
-		Memory:         crd.CRDMemoryString(),
-		Labels:         labels,
-		OBSPath:        ceva.AimPath,
-		EvaluateType:   ceva.Type(),
-	}
+	data.OBSPath = ce.AimPath
+	data.EvaluateType = ce.Type()
 
 	return data.genTemplate(impl.crdTemplate, obj)
 }
 
 func (impl *evaluateImpl) getStandardObj(
-	seva *domain.StandardEvaluate,
+	se *domain.StandardEvaluate,
 	obj *unstructured.Unstructured,
 ) error {
-	name := impl.geneMetaName(&seva.EvaluateIndex)
-	labels := impl.geneLabels(&seva.EvaluateIndex)
-	crd := &impl.cfg.CRD
+	data := new(crdData)
+	impl.genCrdData(data, &se.EvaluateIndex, se.SurvivalTime)
 
-	data := crdData{
-		Group:          k8sclient.Cfg.Group,
-		Version:        k8sclient.Cfg.Version,
-		CodeServer:     k8sclient.Cfg.Kind,
-		Name:           name,
-		NameSpace:      crd.CRDNamespace,
-		Image:          crd.CRDImage,
-		ObsAk:          impl.cfg.OBS.AccessKey,
-		ObsSk:          impl.cfg.OBS.SecretKey,
-		ObsEndPoint:    impl.cfg.OBS.Endpoint,
-		ObsUtilPath:    impl.cfg.OBS.OBSUtilPath,
-		ObsBucket:      impl.cfg.OBS.Bucket,
-		StorageSize:    10,
-		RecycleSeconds: seva.SurvivalTime,
-		CPU:            crd.CRDCpuString(),
-		Memory:         crd.CRDMemoryString(),
-		Labels:         labels,
-		OBSPath:        seva.LogPath,
-		EvaluateType:   seva.Type(),
-		LearningScope:  seva.LearningRateScope.String(),
-		BatchScope:     seva.BatchSizeScope.String(),
-		MomentumScope:  seva.MomentumScope.String(),
-	}
+	data.OBSPath = se.LogPath
+	data.EvaluateType = se.Type()
+	data.LearningScope = se.LearningRateScope.String()
+	data.BatchScope = se.BatchSizeScope.String()
+	data.MomentumScope = se.MomentumScope.String()
 
 	return data.genTemplate(impl.crdTemplate, obj)
+}
+
+func (impl *evaluateImpl) genCrdData(
+	data *crdData,
+	index *domain.EvaluateIndex, survivalTime int,
+) {
+	crd := &impl.cfg.CRD
+	obs := &impl.cfg.OBS
+	k8sConfig := &impl.k8sConfig
+
+	*data = crdData{
+		Group:          k8sConfig.Group,
+		Version:        k8sConfig.Version,
+		CodeServer:     k8sConfig.Kind,
+		Name:           impl.geneMetaName(index),
+		NameSpace:      crd.CRDNamespace,
+		Image:          crd.CRDImage,
+		CPU:            crd.CRDCpuString(),
+		Memory:         crd.CRDMemoryString(),
+		StorageSize:    10,
+		RecycleSeconds: survivalTime,
+		Labels:         impl.geneLabels(index),
+
+		ObsAk:       obs.AccessKey,
+		ObsSk:       obs.SecretKey,
+		ObsBucket:   obs.Bucket,
+		ObsEndPoint: obs.Endpoint,
+		ObsUtilPath: obs.OBSUtilPath,
+	}
 }
 
 type crdData struct {
@@ -197,11 +181,12 @@ type crdData struct {
 	RecycleSeconds int
 	Labels         map[string]string
 
-	ObsAk         string
-	ObsSk         string
-	ObsEndPoint   string
-	ObsUtilPath   string
-	ObsBucket     string
+	ObsAk       string
+	ObsSk       string
+	ObsBucket   string
+	ObsEndPoint string
+	ObsUtilPath string
+
 	OBSPath       string
 	EvaluateType  string
 	LearningScope string

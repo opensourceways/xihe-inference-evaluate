@@ -11,6 +11,7 @@ import (
 	"github.com/opensourceways/xihe-inference-evaluate/config"
 	"github.com/opensourceways/xihe-inference-evaluate/controller"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/evaluateimpl"
+	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/inferenceimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/watchimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/k8sclient"
 	"github.com/opensourceways/xihe-inference-evaluate/server"
@@ -68,9 +69,15 @@ func main() {
 	}
 
 	// evaluate
-	evaluate, err := evaluateimpl.NewEvaluate(&cfg.Evaluate)
+	evaluate, err := evaluateimpl.NewEvaluate(&cfg.Evaluate, cfg.K8sClient)
 	if err != nil {
 		logrus.Fatalf("new evaluate service failed, err:%s", err.Error())
+	}
+
+	// inference
+	inference, err := inferenceimpl.NewInference(&cfg.Inference, cfg.K8sClient)
+	if err != nil {
+		logrus.Fatalf("new inference service failed, err:%s", err.Error())
 	}
 
 	// controller
@@ -85,7 +92,8 @@ func main() {
 	server.StartWebServer(
 		o.service.Port, o.service.GracePeriod, cfg,
 		&server.Service{
-			Evaluate: evaluate,
+			Evaluate:  evaluate,
+			Inference: inference,
 		},
 	)
 }

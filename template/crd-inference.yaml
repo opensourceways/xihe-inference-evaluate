@@ -19,7 +19,7 @@ spec:
   restartPolicy: Never
   resources:
     requests:
-      cpu: {{.CPU}}
+      cpu: "{{.CPU}}"
       memory: {{.Memory}}Mi
   connectProbe: /
   workspaceLocation: /workspace
@@ -46,13 +46,3 @@ spec:
       value: {{.ObsBucket}}
     - name: OBS_LFS_PATH
       value: {{.ObsLfsPath}}
-    - name: OBS_PATH
-      value: {{.OBSPath}}
-    - name: EVALUATE_TYPE
-      value: {{.EvaluateType}}
-    - name: LEARNING_RATE_SCOPE
-      value: "{{.LearningScope}}"
-    - name: BATCH_SIZE_SCOPE
-      value: "{{.BatchScope}}"
-    - name: MOMENTUM_SCOPE
-      value: "{{.MomentumScope}}"

@@ -15,11 +15,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/evaluateimpl"
@@ -43,9 +41,7 @@ type Watcher struct {
 	res      *kubernetes.Clientset
 	resync   time.Duration
 	mux      *sync.Mutex
-	config   *rest.Config
-	dym      dynamic.Interface
-	resource schema.GroupVersionResource
+	resource dynamic.NamespaceableResourceInterface
 	nConfig  *Config
 	stopCh   chan struct{}
 }
@@ -56,12 +52,9 @@ type StatusDetail struct {
 }
 
 func NewWatcher(cfg *Config) *Watcher {
-	resource := k8sclient.GetResource()
 	return &Watcher{
 		res:      k8sclient.GetClient(),
-		config:   k8sclient.GetK8sConfig(),
-		dym:      k8sclient.GetDyna(),
-		resource: resource,
+		resource: k8sclient.GetResource(),
 		nConfig:  cfg,
 	}
 }
@@ -105,7 +98,9 @@ func (w *Watcher) dispatcher(res v1.CodeServer) {
 	status := w.transferStatus(res)
 
 	switch res.Labels["type"] {
-	case inferenceimpl.MetaNameInference:
+	case inferenceimpl.MetaName():
+		logrus.Debugf("watched inference crd, status: %s", status)
+
 		w.HandleInference(res.ObjectMeta.Labels, status)
 
 	case evaluateimpl.MetaName():
@@ -187,10 +182,10 @@ func (w *Watcher) crdConfig() cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-				return w.dym.Resource(w.resource).List(context.TODO(), options)
+				return w.resource.List(context.TODO(), options)
 			},
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-				return w.dym.Resource(w.resource).Watch(context.TODO(), options)
+				return w.resource.Watch(context.TODO(), options)
 			},
 		},
 		&unstructured.Unstructured{},

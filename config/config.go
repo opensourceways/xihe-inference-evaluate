@@ -39,7 +39,7 @@ type Config struct {
 	Watch     watchimpl.Config     `json:"watch"      required:"true"`
 	Evaluate  evaluateimpl.Config  `json:"evaluate"   required:"true"`
 	Inference inferenceimpl.Config `json:"inference"  required:"true"`
-	K8sClient k8sclient.Config     `json:"k8S"        required:"true"`
+	K8sClient k8sclient.Config     `json:"k8s"        required:"true"`
 }
 
 func (cfg *Config) configItems() []interface{} {

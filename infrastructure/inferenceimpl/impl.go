@@ -1,56 +1,88 @@
 package inferenceimpl
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"html/template"
+	"io/ioutil"
 
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 
 	"github.com/opensourceways/xihe-inference-evaluate/domain"
 	"github.com/opensourceways/xihe-inference-evaluate/domain/inference"
 	"github.com/opensourceways/xihe-inference-evaluate/k8sclient"
 )
 
-const MetaNameInference = "inference"
+const metaNameInference = "inference"
 
-func NewInference(cfg *Config) inference.Inference {
-	return inferenceImpl{
-		cfg: cfg,
+func MetaName() string {
+	return metaNameInference
+}
+
+func NewInference(cfg *Config, k8sConfig k8sclient.Config) (inference.Inference, error) {
+	txtStr, err := ioutil.ReadFile(cfg.CRD.TemplateFile)
+	if err != nil {
+		return nil, err
 	}
+
+	tmpl, err := template.New("inference").Parse(string(txtStr))
+	if err != nil {
+		return nil, err
+	}
+
+	return inferenceImpl{
+		cfg:         cfg,
+		k8sConfig:   k8sConfig,
+		crdTemplate: tmpl,
+	}, nil
 }
 
 type inferenceImpl struct {
-	cfg *Config
+	cfg         *Config
+	k8sConfig   k8sclient.Config
+	crdTemplate *template.Template
+}
+
+func (impl *inferenceImpl) inferenceIndexString(e *domain.InferenceIndex) string {
+	return fmt.Sprintf(
+		"%s/%s/%s, meta name:%s",
+		e.Project.Owner.Account(), e.Project.Id,
+		e.Id, impl.geneMetaName(e),
+	)
 }
 
 func (impl inferenceImpl) Create(infer *domain.Inference) error {
-	cli := k8sclient.GetDyna()
-	resource := k8sclient.GetResource()
+	s := impl.inferenceIndexString(&infer.InferenceIndex)
+	logrus.Debugf("create inference for %s.", s)
 
-	res, err := impl.GetObj(infer)
-	if err != nil {
+	res := new(unstructured.Unstructured)
+
+	if err := impl.getObj(infer, res); err != nil {
 		return err
 	}
 
-	if res == nil {
-		logrus.Errorf("res == nil")
-	}
+	ns := k8sclient.GetNamespace(impl.cfg.CRD.CRDNamespace)
+	_, err := ns.Create(context.TODO(), res, metav1.CreateOptions{})
 
-	dr := cli.Resource(resource).Namespace(impl.cfg.CRD.CRDNamespace)
-	_, err = dr.Create(context.TODO(), res, metav1.CreateOptions{})
+	logrus.Debugf(
+		"create inference:%s in %s, err:%v.",
+		s, impl.cfg.CRD.CRDNamespace, err,
+	)
 
 	return err
 }
 
 func (impl inferenceImpl) ExtendSurvivalTime(infer *domain.InferenceIndex, timeToExtend int) error {
-	cli := k8sclient.GetDyna()
-	resource := k8sclient.GetResource()
+	s := impl.inferenceIndexString(infer)
+	logrus.Debugf("extend inference for %s to %d.", s, timeToExtend)
 
-	get, err := cli.Resource(resource).Namespace(impl.cfg.CRD.CRDNamespace).Get(
-		context.TODO(), impl.geneMetaName(infer), metav1.GetOptions{},
-	)
+	ns := k8sclient.GetNamespace(impl.cfg.CRD.CRDNamespace)
+
+	get, err := ns.Get(context.TODO(), impl.geneMetaName(infer), metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -61,57 +93,102 @@ func (impl inferenceImpl) ExtendSurvivalTime(infer *domain.InferenceIndex, timeT
 			spc["recycleAfterSeconds"] = timeToExtend
 		}
 	}
-	_, err = cli.Resource(resource).Namespace(impl.cfg.CRD.CRDNamespace).Update(
-		context.TODO(), get, metav1.UpdateOptions{},
-	)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	_, err = ns.Update(context.TODO(), get, metav1.UpdateOptions{})
+
+	logrus.Debugf("extend inference for %s to %d, err:%v.", s, timeToExtend, err)
+
+	return err
 }
 
 func (impl inferenceImpl) geneMetaName(index *domain.InferenceIndex) string {
-	return fmt.Sprintf("%s-%s", MetaNameInference, index.Id)
+	return fmt.Sprintf("%s-%s", metaNameInference, index.Id)
 }
 
-func (impl inferenceImpl) GeneLabels(infer *domain.Inference) map[string]string {
-	m := make(map[string]string)
-	m["id"] = infer.Id
-	m["user"] = infer.Project.Owner.Account()
-	m["project_id"] = infer.Project.Id
-	m["last_commit"] = infer.LastCommit
-	m["type"] = MetaNameInference
-	return m
+func (impl inferenceImpl) geneLabels(infer *domain.Inference) map[string]string {
+	return map[string]string{
+		"id":          infer.Id,
+		"type":        metaNameInference,
+		"user":        infer.Project.Owner.Account(),
+		"project_id":  infer.Project.Id,
+		"last_commit": infer.LastCommit,
+	}
 }
 
-func (impl inferenceImpl) GetObj(infer *domain.Inference) (*unstructured.Unstructured, error) {
-	name := impl.geneMetaName(&infer.InferenceIndex)
-	labels := impl.GeneLabels(infer)
+func (impl inferenceImpl) getObj(
+	infer *domain.Inference, obj *unstructured.Unstructured,
+) error {
 	crd := &impl.cfg.CRD
+	obs := &impl.cfg.OBS
+	k8sConfig := &impl.k8sConfig
 
-	var data = &k8sclient.CrdData{
-		Group:          k8sclient.Cfg.Group,
-		Version:        k8sclient.Cfg.Version,
-		CodeServer:     k8sclient.Cfg.Kind,
-		Name:           name,
+	data := &crdData{
+		Group:          k8sConfig.Group,
+		Version:        k8sConfig.Version,
+		CodeServer:     k8sConfig.Kind,
+		Name:           impl.geneMetaName(&infer.InferenceIndex),
 		NameSpace:      crd.CRDNamespace,
 		Image:          crd.CRDImage,
+		CPU:            crd.CRDCpuString(),
+		Memory:         crd.CRDMemoryString(),
+		StorageSize:    10,
+		RecycleSeconds: infer.SurvivalTime,
+		Labels:         impl.geneLabels(infer),
+
 		GitlabEndPoint: impl.cfg.GitlabEndpoint,
 		XiheUser:       infer.Project.Owner.Account(),
 		XiheUserToken:  infer.UserToken,
 		ProjectName:    infer.ProjectName.ProjectName(),
 		LastCommit:     infer.LastCommit,
-		ObsAk:          impl.cfg.OBS.AccessKey,
-		ObsSk:          impl.cfg.OBS.SecretKey,
-		ObsEndPoint:    impl.cfg.OBS.Endpoint,
-		ObsUtilPath:    impl.cfg.OBS.OBSUtilPath,
-		ObsBucket:      impl.cfg.OBS.Bucket,
-		ObsLfsPath:     impl.cfg.OBS.LFSPath,
-		StorageSize:    10,
-		RecycleSeconds: infer.SurvivalTime,
-		CPU:            crd.CRDCpuString(),
-		Memory:         crd.CRDMemoryString(),
-		Labels:         labels,
+
+		ObsAk:       obs.AccessKey,
+		ObsSk:       obs.SecretKey,
+		ObsEndPoint: obs.Endpoint,
+		ObsUtilPath: obs.OBSUtilPath,
+		ObsBucket:   obs.Bucket,
+		ObsLfsPath:  obs.LFSPath,
 	}
-	return k8sclient.GetObj(data)
+
+	return data.genTemplate(impl.crdTemplate, obj)
+}
+
+type crdData struct {
+	Group          string
+	Version        string
+	CodeServer     string
+	Name           string
+	NameSpace      string
+	Image          string
+	CPU            string
+	Memory         string
+	StorageSize    int
+	RecycleSeconds int
+	Labels         map[string]string
+
+	GitlabEndPoint string
+	XiheUser       string
+	XiheUserToken  string
+	ProjectName    string
+	LastCommit     string
+
+	ObsAk       string
+	ObsSk       string
+	ObsEndPoint string
+	ObsUtilPath string
+	ObsBucket   string
+	ObsLfsPath  string
+}
+
+func (data *crdData) genTemplate(tmpl *template.Template, obj *unstructured.Unstructured) error {
+	buf := new(bytes.Buffer)
+
+	if err := tmpl.Execute(buf, data); err != nil {
+		return err
+	}
+
+	_, _, err := yaml.NewDecodingSerializer(
+		unstructured.UnstructuredJSONScheme,
+	).Decode(buf.Bytes(), nil, obj)
+
+	return err
 }

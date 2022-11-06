@@ -15,11 +15,12 @@ import (
 	"github.com/opensourceways/xihe-inference-evaluate/controller"
 	"github.com/opensourceways/xihe-inference-evaluate/docs"
 	"github.com/opensourceways/xihe-inference-evaluate/domain/evaluate"
-	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/inferenceimpl"
+	"github.com/opensourceways/xihe-inference-evaluate/domain/inference"
 )
 
 type Service struct {
-	Evaluate evaluate.Evaluate
+	Evaluate  evaluate.Evaluate
+	Inference inference.Inference
 }
 
 func StartWebServer(port int, timeout time.Duration, cfg *config.Config, s *Service) {
@@ -44,12 +45,10 @@ func setRouter(engine *gin.Engine, cfg *config.Config, s *Service) {
 	docs.SwaggerInfo.BasePath = "/api"
 	docs.SwaggerInfo.Title = "xihe"
 
-	inference := inferenceimpl.NewInference(&cfg.Inference)
-
 	v1 := engine.Group(docs.SwaggerInfo.BasePath)
 	{
 		controller.AddRouterForInferenceController(
-			v1, inference,
+			v1, s.Inference,
 		)
 		controller.AddRouterForEvaluateController(
 			v1, s.Evaluate,
