@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -29,14 +30,21 @@ func (impl *evaluateImpl) CreateCustom(ceva *domain.CustomEvaluate) error {
 	resource := k8sclient.GetResource()
 
 	res, err := impl.GetCustomObj(ceva)
-	dr := cli.Resource(resource).Namespace(impl.cfg.CRD.CRDNamespace)
-
-	_, err = dr.Create(context.TODO(), res, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
-	return nil
+
+	if res == nil {
+		logrus.Errorf("res == nil")
+	}
+
+	dr := cli.Resource(resource).Namespace(impl.cfg.CRD.CRDNamespace)
+
+	_, err = dr.Create(context.TODO(), res, metav1.CreateOptions{})
+
+	return err
 }
+
 func (impl *evaluateImpl) CreateStandard(seva *domain.StandardEvaluate) error {
 	cli := k8sclient.GetDyna()
 	resource := k8sclient.GetResource()
@@ -91,6 +99,7 @@ func (impl *evaluateImpl) GetCustomObj(ceva *domain.CustomEvaluate) (*unstructur
 		OBSPath:        ceva.AimPath,
 		EvaluateType:   ceva.Type(),
 	}
+
 	return k8sclient.GetObj(data)
 }
 

@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"github.com/opensourceways/xihe-inference-evaluate/domain"
 	"github.com/opensourceways/xihe-inference-evaluate/domain/inference"
 	"github.com/opensourceways/xihe-inference-evaluate/k8sclient"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const MetaNameInference = "inference"
@@ -28,14 +30,20 @@ func (impl inferenceImpl) Create(infer *domain.Inference) error {
 	resource := k8sclient.GetResource()
 
 	res, err := impl.GetObj(infer)
-
-	dr := cli.Resource(resource).Namespace(impl.cfg.CRD.CRDNamespace)
-	_, err = dr.Create(context.TODO(), res, metav1.CreateOptions{})
 	if err != nil {
 		return err
 	}
-	return nil
+
+	if res == nil {
+		logrus.Errorf("res == nil")
+	}
+
+	dr := cli.Resource(resource).Namespace(impl.cfg.CRD.CRDNamespace)
+	_, err = dr.Create(context.TODO(), res, metav1.CreateOptions{})
+
+	return err
 }
+
 func (impl inferenceImpl) ExtendSurvivalTime(infer *domain.InferenceIndex, timeToExtend int) error {
 	cli := k8sclient.GetDyna()
 	resource := k8sclient.GetResource()
