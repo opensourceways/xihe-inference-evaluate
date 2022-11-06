@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io/ioutil"
 
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
@@ -16,7 +17,11 @@ import (
 	"github.com/opensourceways/xihe-inference-evaluate/k8sclient"
 )
 
-const MetaNameEvaluate = "evaluate"
+const metaNameEvaluate = "evaluate"
+
+func MetaName() string {
+	return metaNameEvaluate
+}
 
 func NewEvaluate(cfg *Config) (evaluate.Evaluate, error) {
 	txtStr, err := ioutil.ReadFile(cfg.CRD.TemplateFile)
@@ -40,60 +45,84 @@ type evaluateImpl struct {
 	crdTemplate *template.Template
 }
 
-func (impl *evaluateImpl) CreateCustom(ceva *domain.CustomEvaluate) error {
+func (impl *evaluateImpl) evaluateIndexString(e *domain.EvaluateIndex) string {
+	return fmt.Sprintf(
+		"%s/%s/%s/%s, meta name:%s",
+		e.Project.Owner.Account(), e.Project.Id,
+		e.TrainingId, e.Id, impl.geneMetaName(e),
+	)
+}
+
+func (impl *evaluateImpl) CreateCustom(ce *domain.CustomEvaluate) error {
+	s := impl.evaluateIndexString(&ce.EvaluateIndex)
+	logrus.Debugf("receive custom evaluate for %s.", s)
+
 	cli := k8sclient.GetDyna()
 	resource := k8sclient.GetResource()
 
 	res := new(unstructured.Unstructured)
 
-	if err := impl.GetCustomObj(ceva, res); err != nil {
+	if err := impl.getCustomObj(ce, res); err != nil {
 		return err
 	}
 
 	dr := cli.Resource(resource).Namespace(impl.cfg.CRD.CRDNamespace)
 
 	_, err := dr.Create(context.TODO(), res, metav1.CreateOptions{})
+
+	logrus.Debugf(
+		"gen crd for custom evaluate:%s in %s/%s, err:%v.",
+		s, resource, impl.cfg.CRD.CRDNamespace, err,
+	)
 
 	return err
 }
 
-func (impl *evaluateImpl) CreateStandard(seva *domain.StandardEvaluate) error {
+func (impl *evaluateImpl) CreateStandard(se *domain.StandardEvaluate) error {
+	s := impl.evaluateIndexString(&se.EvaluateIndex)
+	logrus.Debugf("receive standard evaluate for %s.", s)
+
 	cli := k8sclient.GetDyna()
 	resource := k8sclient.GetResource()
 
 	res := new(unstructured.Unstructured)
 
-	if err := impl.GetStandardObj(seva, res); err != nil {
+	if err := impl.getStandardObj(se, res); err != nil {
 		return err
 	}
 
 	dr := cli.Resource(resource).Namespace(impl.cfg.CRD.CRDNamespace)
 
 	_, err := dr.Create(context.TODO(), res, metav1.CreateOptions{})
+
+	logrus.Debugf(
+		"gen crd for standard evaluate:%s in %s/%s, err:%v.",
+		s, resource, impl.cfg.CRD.CRDNamespace, err,
+	)
 
 	return err
 }
 
 func (impl *evaluateImpl) geneMetaName(eva *domain.EvaluateIndex) string {
-	return fmt.Sprintf("%s-%s", MetaNameEvaluate, eva.Id)
+	return fmt.Sprintf("%s-%s", metaNameEvaluate, eva.Id)
 }
 
-func (impl *evaluateImpl) GeneLabels(eva *domain.EvaluateIndex) map[string]string {
+func (impl *evaluateImpl) geneLabels(eva *domain.EvaluateIndex) map[string]string {
 	m := make(map[string]string)
 	m["id"] = eva.Id
 	m["user"] = eva.Project.Owner.Account()
 	m["project_id"] = eva.Project.Id
 	m["training_id"] = eva.TrainingId
-	m["type"] = MetaNameEvaluate
+	m["type"] = metaNameEvaluate
 	return m
 }
 
-func (impl *evaluateImpl) GetCustomObj(
+func (impl *evaluateImpl) getCustomObj(
 	ceva *domain.CustomEvaluate,
 	obj *unstructured.Unstructured,
 ) error {
 	name := impl.geneMetaName(&ceva.EvaluateIndex)
-	labels := impl.GeneLabels(&ceva.EvaluateIndex)
+	labels := impl.geneLabels(&ceva.EvaluateIndex)
 	crd := &impl.cfg.CRD
 
 	data := crdData{
@@ -120,12 +149,12 @@ func (impl *evaluateImpl) GetCustomObj(
 	return data.genTemplate(impl.crdTemplate, obj)
 }
 
-func (impl *evaluateImpl) GetStandardObj(
+func (impl *evaluateImpl) getStandardObj(
 	seva *domain.StandardEvaluate,
 	obj *unstructured.Unstructured,
 ) error {
 	name := impl.geneMetaName(&seva.EvaluateIndex)
-	labels := impl.GeneLabels(&seva.EvaluateIndex)
+	labels := impl.geneLabels(&seva.EvaluateIndex)
 	crd := &impl.cfg.CRD
 
 	data := crdData{

@@ -6,13 +6,14 @@ import (
 
 	"github.com/opensourceways/community-robot-lib/logrusutil"
 	liboptions "github.com/opensourceways/community-robot-lib/options"
+	"github.com/sirupsen/logrus"
+
 	"github.com/opensourceways/xihe-inference-evaluate/config"
 	"github.com/opensourceways/xihe-inference-evaluate/controller"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/evaluateimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/watchimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/k8sclient"
 	"github.com/opensourceways/xihe-inference-evaluate/server"
-	"github.com/sirupsen/logrus"
 )
 
 type options struct {

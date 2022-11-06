@@ -91,6 +91,7 @@ func (w *Watcher) Update(oldObj, newObj interface{}) {
 		logrus.Errorf("update marshal error:%s", err.Error())
 		return
 	}
+
 	err = json.Unmarshal(bys, &res)
 	if err != nil {
 		logrus.Errorf("update unmarshal error:%s", err.Error())
@@ -102,10 +103,14 @@ func (w *Watcher) Update(oldObj, newObj interface{}) {
 
 func (w *Watcher) dispatcher(res v1.CodeServer) {
 	status := w.transferStatus(res)
+
 	switch res.Labels["type"] {
 	case inferenceimpl.MetaNameInference:
 		w.HandleInference(res.ObjectMeta.Labels, status)
-	case evaluateimpl.MetaNameEvaluate:
+
+	case evaluateimpl.MetaName():
+		logrus.Debugf("watched evaluate crd, status: %s", status)
+
 		w.HandleEvaluate(res.ObjectMeta.Labels, status)
 	}
 }
@@ -135,7 +140,6 @@ func (w *Watcher) transferStatus(res v1.CodeServer) (status StatusDetail) {
 }
 
 func (w *Watcher) HandleInference(labels map[string]string, status StatusDetail) {
-
 	cli, err := rpcclient.NewInferenceClient(w.nConfig.InferenceEndpoint)
 	if err != nil {
 		logrus.Errorf("new rpc client error:%s", err.Error())
