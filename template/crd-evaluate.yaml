@@ -1,0 +1,46 @@
+apiVersion: {{.Group}}/{{.Version}}
+kind: {{.CodeServer}}
+metadata:
+  name: {{.Name}}
+  namespace: {{.NameSpace}}
+  labels:
+      {{range $key, $value := .Labels}}
+        {{$key}}: {{$value}}
+        {{end}}
+
+spec:
+  runtime: generic
+  subdomain: {{.Name}}
+  image: {{.Image}}
+  storageSize: {{.StorageSize}}Gi
+  storageName: emptyDir
+  inactiveAfterSeconds: 0
+  recycleAfterSeconds: {{.RecycleSeconds}}
+  restartPolicy: Never
+  resources:
+    requests:
+      cpu: "{{.CPU}}"
+      memory: {{.Memory}}Mi
+  connectProbe: /
+  workspaceLocation: /workspace
+  envs:
+    - name: OBS_AK
+      value: {{.ObsAk}}
+    - name: OBS_SK
+      value: {{.ObsSk}}
+    - name: OBS_ENDPOINT
+      value: {{.ObsEndPoint}}
+    - name: OBS_UTIL_PATH
+      value: {{.ObsUtilPath}}
+    - name: OBS_BUCKET
+      value: {{.ObsBucket}}
+    - name: OBS_PATH
+      value: {{.OBSPath}}
+    - name: EVALUATE_TYPE
+      value: {{.EvaluateType}}
+    - name: LEARNING_RATE_SCOPE
+      value: "{{.LearningScope}}"
+    - name: BATCH_SIZE_SCOPE
+      value: "{{.BatchScope}}"
+    - name: MOMENTUM_SCOPE
+      value: "{{.MomentumScope}}"

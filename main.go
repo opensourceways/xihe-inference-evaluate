@@ -8,6 +8,7 @@ import (
 	liboptions "github.com/opensourceways/community-robot-lib/options"
 	"github.com/opensourceways/xihe-inference-evaluate/config"
 	"github.com/opensourceways/xihe-inference-evaluate/controller"
+	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/evaluateimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/watchimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/k8sclient"
 	"github.com/opensourceways/xihe-inference-evaluate/server"
@@ -65,6 +66,12 @@ func main() {
 		logrus.Fatalf("k8s client init, err:%s", err.Error())
 	}
 
+	// evaluate
+	evaluate, err := evaluateimpl.NewEvaluate(&cfg.Evaluate)
+	if err != nil {
+		logrus.Fatalf("new evaluate service failed, err:%s", err.Error())
+	}
+
 	// controller
 	controller.Init(log)
 
@@ -74,5 +81,10 @@ func main() {
 	defer w.Exit()
 
 	// run
-	server.StartWebServer(o.service.Port, o.service.GracePeriod, cfg)
+	server.StartWebServer(
+		o.service.Port, o.service.GracePeriod, cfg,
+		&server.Service{
+			Evaluate: evaluate,
+		},
+	)
 }

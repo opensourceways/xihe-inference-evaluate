@@ -4,6 +4,7 @@ import "fmt"
 
 type CRDConfig struct {
 	CRDImage     string `json:"crd_image"        required:"true"`
+	TemplateFile string `json:"crd_template"     required:"true"`
 	CRDNamespace string `json:"crd_namespace"    required:"true"`
 
 	// CrdCpu specifies the number of cpu
