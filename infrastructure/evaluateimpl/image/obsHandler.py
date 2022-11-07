@@ -13,7 +13,7 @@ class OBSHandler:
         self.secret_key = obs_sk
         self.bucket_name = obs_bucketname
         self.endpoint = obs_endpoint
-        self.server = "https://" + obs_endpoint
+        self.server = obs_endpoint
         self.obsClient = self.init_obs()
         self.maxkeys = 100  #查询的对象最大个数
 
@@ -28,7 +28,7 @@ class OBSHandler:
 
     def close_obs(self):
         self.obsClient.close()
-      
+
     def readFile(self, path):
         """
         二进制读取文本文件
@@ -37,6 +37,7 @@ class OBSHandler:
         """
         try:
             resp = self.obsClient.getObject(self.bucket_name, path, loadStreamInMemory=True)
+
             if resp.status < 300:
                 # 获取对象内容
                 return {

@@ -101,13 +101,13 @@ func (impl *evaluateImpl) geneMetaName(eva *domain.EvaluateIndex) string {
 }
 
 func (impl *evaluateImpl) geneLabels(eva *domain.EvaluateIndex) map[string]string {
-	m := make(map[string]string)
-	m["id"] = eva.Id
-	m["user"] = eva.Project.Owner.Account()
-	m["project_id"] = eva.Project.Id
-	m["training_id"] = eva.TrainingId
-	m["type"] = metaNameEvaluate
-	return m
+	return map[string]string{
+		"id":          eva.Id,
+		"user":        eva.Project.Owner.Account(),
+		"project_id":  eva.Project.Id,
+		"training_id": eva.TrainingId,
+		"type":        metaNameEvaluate,
+	}
 }
 
 func (impl *evaluateImpl) getCustomObj(
