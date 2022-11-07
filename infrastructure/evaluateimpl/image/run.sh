@@ -2,6 +2,8 @@
 
 set -euox pipefail
 
+export PATH=/root/.local/bin:$PATH
+
 obs_path=${OBS_PATH}
 evaluate_type=${EVALUATE_TYPE}
 obs_ak=${OBS_AK}

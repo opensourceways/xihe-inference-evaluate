@@ -20,7 +20,7 @@ spec:
   resources:
     requests:
       cpu: "{{.CPU}}"
-      memory: {{.Memory}}Mi
+      memory: {{.Memory}}
   connectProbe: /
   workspaceLocation: /workspace
   envs:
