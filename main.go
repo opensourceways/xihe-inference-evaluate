@@ -84,7 +84,11 @@ func main() {
 	controller.Init(log)
 
 	// watcher
-	w := watchimpl.NewWatcher(&cfg.Watch)
+	w, err := watchimpl.NewWatcher(&cfg.Watch)
+	if err != nil {
+		logrus.Fatalf("new watch service failed, err:%s", err.Error())
+	}
+
 	go w.Run()
 	defer w.Exit()
 
