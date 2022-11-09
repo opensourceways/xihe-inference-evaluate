@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/goccy/go-json"
 	v1 "github.com/opensourceways/code-server-operator/api/v1alpha1"
 	rpcclient "github.com/opensourceways/xihe-grpc-protocol/grpc/client"
 	"github.com/opensourceways/xihe-grpc-protocol/grpc/evaluate"
@@ -30,9 +29,7 @@ var serverUnusable = map[v1.ServerConditionType]struct{}{
 }
 
 var serverUsable = map[v1.ServerConditionType]struct{}{
-	v1.ServerCreated: {},
-	v1.ServerReady:   {},
-	v1.ServerBound:   {},
+	v1.ServerReady: {},
 }
 
 type Watcher struct {
@@ -85,18 +82,9 @@ func (w *Watcher) Run() {
 }
 
 func (w *Watcher) update(oldObj, newObj interface{}) {
-	var res v1.CodeServer
-
-	bys, err := json.Marshal(newObj)
-	if err != nil {
-		logrus.Errorf("update marshal error:%s", err.Error())
-
-		return
-	}
-
-	err = json.Unmarshal(bys, &res)
-	if err != nil {
-		logrus.Errorf("update unmarshal error:%s", err.Error())
+	res, ok := newObj.(v1.CodeServer)
+	if !ok {
+		logrus.Errorf("arrert err: %v", newObj)
 
 		return
 	}
@@ -127,6 +115,9 @@ func (w *Watcher) transferStatus(res v1.CodeServer) (status statusDetail) {
 		if _, ok := serverUnusable[condition.Type]; ok {
 			if condition.Status == corev1.ConditionTrue {
 				status.errorMsg = condition.Reason
+				if msg, ok := condition.Message["detail"]; ok && len(msg) != 0 {
+					status.errorMsg = msg
+				}
 
 				return
 			}
