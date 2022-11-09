@@ -1,6 +1,9 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 type CRDConfig struct {
 	CRDImage     string `json:"crd_image"        required:"true"`
@@ -26,11 +29,11 @@ func (cfg *CRDConfig) CRDMemoryString() string {
 }
 
 func (cfg *CRDConfig) CRDContainerPortString() string {
-	return fmt.Sprintf("%d", cfg.ContainerPort)
+	return strconv.Itoa(cfg.ContainerPort)
 }
 
 func (cfg *CRDConfig) SetDefault() {
-	if cfg.ContainerPort == 0 {
+	if cfg.ContainerPort <= 0 {
 		cfg.ContainerPort = 8080
 	}
 }

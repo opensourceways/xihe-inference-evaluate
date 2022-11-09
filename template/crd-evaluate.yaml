@@ -23,6 +23,7 @@ spec:
       memory: {{.Memory}}
   connectProbe: /
   workspaceLocation: /workspace
+  containerPort: "{{.ContainerPort}}"
   envs:
     - name: OBS_AK
       value: {{.ObsAk}}

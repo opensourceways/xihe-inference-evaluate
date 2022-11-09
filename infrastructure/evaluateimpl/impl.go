@@ -159,6 +159,7 @@ func (impl *evaluateImpl) genCrdData(
 		StorageSize:    10,
 		RecycleSeconds: survivalTime,
 		Labels:         impl.geneLabels(index),
+		ContainerPort:  crd.CRDContainerPortString(),
 
 		ObsAk:       obs.AccessKey,
 		ObsSk:       obs.SecretKey,
@@ -180,6 +181,7 @@ type crdData struct {
 	StorageSize    int
 	RecycleSeconds int
 	Labels         map[string]string
+	ContainerPort  string
 
 	ObsAk       string
 	ObsSk       string
