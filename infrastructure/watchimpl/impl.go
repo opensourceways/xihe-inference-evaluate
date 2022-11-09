@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/goccy/go-json"
 	v1 "github.com/opensourceways/code-server-operator/api/v1alpha1"
 	rpcclient "github.com/opensourceways/xihe-grpc-protocol/grpc/client"
 	"github.com/opensourceways/xihe-grpc-protocol/grpc/evaluate"
@@ -82,9 +83,18 @@ func (w *Watcher) Run() {
 }
 
 func (w *Watcher) update(oldObj, newObj interface{}) {
-	res, ok := newObj.(v1.CodeServer)
-	if !ok {
-		logrus.Debugf("assert err: %v", newObj)
+	var res v1.CodeServer
+
+	bys, err := json.Marshal(newObj)
+	if err != nil {
+		logrus.Errorf("update marshal error:%s", err.Error())
+
+		return
+	}
+
+	err = json.Unmarshal(bys, &res)
+	if err != nil {
+		logrus.Errorf("update unmarshal error:%s", err.Error())
 
 		return
 	}
