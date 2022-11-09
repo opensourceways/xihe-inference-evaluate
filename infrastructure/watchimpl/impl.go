@@ -2,9 +2,9 @@ package watchimpl
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
-	"github.com/goccy/go-json"
 	v1 "github.com/opensourceways/code-server-operator/api/v1alpha1"
 	rpcclient "github.com/opensourceways/xihe-grpc-protocol/grpc/client"
 	"github.com/opensourceways/xihe-grpc-protocol/grpc/evaluate"
@@ -37,6 +37,7 @@ type Watcher struct {
 	evaluateClient  *rpcclient.EvaluateClient
 	inferenceClient *rpcclient.InferenceClient
 
+	handles  map[string]func(map[string]string, statusDetail)
 	resource dynamic.NamespaceableResourceInterface
 	stopCh   chan struct{}
 }
@@ -57,11 +58,18 @@ func NewWatcher(cfg *Config) (*Watcher, error) {
 		return nil, fmt.Errorf("new evaluate rpc client error: %s", err.Error())
 	}
 
-	return &Watcher{
+	w := &Watcher{
 		resource:        k8sclient.GetResource(),
 		evaluateClient:  evaluateClient,
 		inferenceClient: inferenceClient,
-	}, nil
+	}
+
+	w.handles = map[string]func(map[string]string, statusDetail){
+		inferenceimpl.MetaName(): w.handleInference,
+		evaluateimpl.MetaName():  w.handleEvaluate,
+	}
+
+	return w, nil
 }
 
 func (w *Watcher) Run() {
@@ -83,39 +91,27 @@ func (w *Watcher) Run() {
 }
 
 func (w *Watcher) update(oldObj, newObj interface{}) {
-	var res v1.CodeServer
-
-	bys, err := json.Marshal(newObj)
+	v, err := json.Marshal(newObj)
 	if err != nil {
 		logrus.Errorf("update marshal error:%s", err.Error())
 
 		return
 	}
 
-	err = json.Unmarshal(bys, &res)
-	if err != nil {
+	var res v1.CodeServer
+
+	if err = json.Unmarshal(v, &res); err != nil {
 		logrus.Errorf("update unmarshal error:%s", err.Error())
 
 		return
 	}
 
-	go w.dispatcher(res)
-}
-
-func (w *Watcher) dispatcher(res v1.CodeServer) {
-	status := w.transferStatus(res)
-
-	switch res.Labels["type"] {
-	case inferenceimpl.MetaName():
-		logrus.Debugf("watched inference crd, status: %s", status)
-
-		w.handleInference(res.ObjectMeta.Labels, status)
-
-	case evaluateimpl.MetaName():
-		logrus.Debugf("watched evaluate crd, status: %s", status)
-
-		w.handleEvaluate(res.ObjectMeta.Labels, status)
+	h, ok := w.handles[res.Labels["type"]]
+	if !ok {
+		return
 	}
+
+	go h(res.ObjectMeta.Labels, w.transferStatus(res))
 }
 
 func (w *Watcher) transferStatus(res v1.CodeServer) (status statusDetail) {

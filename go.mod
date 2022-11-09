@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/gin-gonic/gin v1.8.1
-	github.com/goccy/go-json v0.9.7
 	github.com/opensourceways/code-server-operator v0.0.0-20220811125600-e78ea6761c18
 	github.com/opensourceways/community-robot-lib v0.0.0-20221016001453-0602b5e39d95
 	github.com/opensourceways/xihe-grpc-protocol v0.0.0-20221101123717-861bb4a4b5bb
@@ -32,6 +31,7 @@ require (
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator/v10 v10.10.0 // indirect
+	github.com/goccy/go-json v0.9.7 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
