@@ -7,6 +7,9 @@ type CRDConfig struct {
 	TemplateFile string `json:"crd_template"     required:"true"`
 	CRDNamespace string `json:"crd_namespace"    required:"true"`
 
+	// Specifies the terminal container port for connection
+	ContainerPort int `json:"container_port"   required:"true"`
+
 	// CrdCpu specifies the number of cpu
 	CRDCpu float32 `json:"crd_cpu"               required:"true"`
 
@@ -20,4 +23,14 @@ func (cfg *CRDConfig) CRDCpuString() string {
 
 func (cfg *CRDConfig) CRDMemoryString() string {
 	return fmt.Sprintf("%vMi", cfg.CRDMemory)
+}
+
+func (cfg *CRDConfig) CRDContainerPortString() string {
+	return fmt.Sprintf("%d", cfg.ContainerPort)
+}
+
+func (cfg *CRDConfig) SetDefault() {
+	if cfg.ContainerPort == 0 {
+		cfg.ContainerPort = 8080
+	}
 }

@@ -134,6 +134,7 @@ func (impl inferenceImpl) getObj(
 		StorageSize:    10,
 		RecycleSeconds: infer.SurvivalTime,
 		Labels:         impl.geneLabels(infer),
+		ContainerPort:  crd.CRDContainerPortString(),
 
 		GitlabEndPoint: impl.cfg.GitlabEndpoint,
 		XiheUser:       infer.Project.Owner.Account(),
@@ -164,6 +165,7 @@ type crdData struct {
 	StorageSize    int
 	RecycleSeconds int
 	Labels         map[string]string
+	ContainerPort  string
 
 	GitlabEndPoint string
 	XiheUser       string
