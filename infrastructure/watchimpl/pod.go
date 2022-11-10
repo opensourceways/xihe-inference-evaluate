@@ -9,7 +9,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	labelType   = "type"
+	labelCSName = "cs_name"
+)
+
 func (w *Watcher) watchPod() {
+	logrus.Debug("start watching pods.")
+
 	t := time.Tick(time.Second * 2)
 
 	for {
@@ -57,8 +64,11 @@ func (w *Watcher) checkPods(pods []corev1.Pod) {
 		}
 
 		labels := w.deleteCRDOfPod(pod)
+		if len(labels) == 0 {
+			continue
+		}
 
-		if h, ok := w.handles[labels["type"]]; ok {
+		if h, ok := w.handles[labels[labelType]]; ok {
 			d := statusDetail{}
 
 			if buf.Len() == 0 {
@@ -73,7 +83,7 @@ func (w *Watcher) checkPods(pods []corev1.Pod) {
 }
 
 func (w *Watcher) deleteCRDOfPod(pod *corev1.Pod) (labels map[string]string) {
-	name := pod.Labels["cs_name"]
+	name := pod.Labels[labelCSName]
 
 	crd, err := w.cli.GetCRD(name)
 	if err != nil {

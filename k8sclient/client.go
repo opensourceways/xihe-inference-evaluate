@@ -66,10 +66,6 @@ type Client struct {
 	podCli      typedcorev1.PodInterface
 }
 
-func (cli *Client) GetPodClient() typedcorev1.PodInterface {
-	return cli.podCli
-}
-
 func (cli *Client) GetResource() dynamic.NamespaceableResourceInterface {
 	return cli.resource
 }

@@ -55,16 +55,15 @@ func NewWatcher(cli *k8sclient.Client, cfg *Config) (*Watcher, error) {
 		stopped:         make(chan struct{}),
 		evaluateClient:  evaluateClient,
 		inferenceClient: inferenceClient,
+		podNamePrifixes: []string{
+			inferenceimpl.MetaName(),
+			evaluateimpl.MetaName(),
+		},
 	}
 
 	w.handles = map[string]func(map[string]string, statusDetail){
 		inferenceimpl.MetaName(): w.handleInference,
 		evaluateimpl.MetaName():  w.handleEvaluate,
-	}
-
-	w.podNamePrifixes = []string{
-		inferenceimpl.MetaName(),
-		evaluateimpl.MetaName(),
 	}
 
 	return w, nil
@@ -116,7 +115,7 @@ func (w *Watcher) update(oldObj, newObj interface{}) {
 }
 
 func (w *Watcher) watchCRD(res v1.CodeServer) {
-	h, ok := w.handles[res.Labels["type"]]
+	h, ok := w.handles[res.Labels[labelType]]
 	if !ok {
 		return
 	}
