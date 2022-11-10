@@ -78,11 +78,15 @@ func (w *Watcher) Run() {
 
 	infor.Run(w.stop)
 
+	logrus.Debug("step here")
+
 	if !cache.WaitForCacheSync(w.stop, infor.HasSynced) {
 		logrus.Fatalln("cache sync err")
 
 		return
 	}
+
+	logrus.Debug("watch pod")
 
 	w.watchPod()
 
