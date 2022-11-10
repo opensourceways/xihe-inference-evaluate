@@ -17,6 +17,8 @@ const (
 func (w *Watcher) watchPod() {
 	logrus.Debug("start watching pods.")
 
+	defer w.wg.Done()
+
 	t := time.Tick(time.Second * 2)
 
 	for {
@@ -29,8 +31,6 @@ func (w *Watcher) watchPod() {
 			}
 
 		case <-w.stop:
-			close(w.podWatchStopped)
-
 			return
 		}
 	}

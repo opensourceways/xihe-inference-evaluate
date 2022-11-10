@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	v1 "github.com/opensourceways/code-server-operator/api/v1alpha1"
 	rpcclient "github.com/opensourceways/xihe-grpc-protocol/grpc/client"
@@ -30,8 +31,7 @@ type Watcher struct {
 	podNamePrifixes []string
 	handles         map[string]func(map[string]string, statusDetail)
 	stop            chan struct{}
-	crdWatchStopped chan struct{}
-	podWatchStopped chan struct{}
+	wg              sync.WaitGroup
 }
 
 type statusDetail struct {
@@ -53,8 +53,6 @@ func NewWatcher(cli *k8sclient.Client, cfg *Config) (*Watcher, error) {
 	w := &Watcher{
 		cli:             cli,
 		stop:            make(chan struct{}),
-		crdWatchStopped: make(chan struct{}),
-		podWatchStopped: make(chan struct{}),
 		evaluateClient:  evaluateClient,
 		inferenceClient: inferenceClient,
 		podNamePrifixes: []string{
@@ -72,8 +70,10 @@ func NewWatcher(cli *k8sclient.Client, cfg *Config) (*Watcher, error) {
 }
 
 func (w *Watcher) Run() {
-	go w.watchCRD()
 
+	w.watchCRD()
+
+	w.wg.Add(1)
 	go w.watchPod()
 }
 
@@ -84,24 +84,26 @@ func (w *Watcher) watchCRD() {
 		UpdateFunc: w.update,
 	})
 
-	logrus.Debug("start watching crd.")
+	w.wg.Add(1)
+	go func() {
+		logrus.Debug("start watching crd")
 
-	infor.Run(w.stop)
+		infor.Run(w.stop)
 
-	logrus.Debug("exit watching crd.")
+		w.wg.Done()
+	}()
 
 	if !cache.WaitForCacheSync(w.stop, infor.HasSynced) {
 		logrus.Error("cache sync err")
+	} else {
+		logrus.Debug("cache sync done")
 	}
-
-	close(w.crdWatchStopped)
 }
 
 func (w *Watcher) Exit() {
 	close(w.stop)
 
-	<-w.crdWatchStopped
-	<-w.podWatchStopped
+	w.wg.Wait()
 }
 
 func (w *Watcher) update(oldObj, newObj interface{}) {
@@ -120,10 +122,13 @@ func (w *Watcher) update(oldObj, newObj interface{}) {
 		return
 	}
 
+	w.wg.Add(1)
 	go w.checkCRD(res)
 }
 
 func (w *Watcher) checkCRD(res v1.CodeServer) {
+	defer w.wg.Done()
+
 	h, ok := w.handles[res.Labels[labelType]]
 	if !ok {
 		return
