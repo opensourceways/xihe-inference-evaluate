@@ -29,6 +29,8 @@ func (w *Watcher) watchPod() {
 			}
 
 		case <-w.stop:
+			close(w.podWatchStopped)
+
 			return
 		}
 	}

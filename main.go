@@ -89,7 +89,7 @@ func main() {
 		logrus.Fatalf("new watch service failed, err:%s", err.Error())
 	}
 
-	go w.Run()
+	w.Run()
 	defer w.Exit()
 
 	// run

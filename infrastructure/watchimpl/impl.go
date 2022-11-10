@@ -30,7 +30,8 @@ type Watcher struct {
 	podNamePrifixes []string
 	handles         map[string]func(map[string]string, statusDetail)
 	stop            chan struct{}
-	stopped         chan struct{}
+	crdWatchStopped chan struct{}
+	podWatchStopped chan struct{}
 }
 
 type statusDetail struct {
@@ -52,7 +53,8 @@ func NewWatcher(cli *k8sclient.Client, cfg *Config) (*Watcher, error) {
 	w := &Watcher{
 		cli:             cli,
 		stop:            make(chan struct{}),
-		stopped:         make(chan struct{}),
+		crdWatchStopped: make(chan struct{}),
+		podWatchStopped: make(chan struct{}),
 		evaluateClient:  evaluateClient,
 		inferenceClient: inferenceClient,
 		podNamePrifixes: []string{
@@ -70,33 +72,36 @@ func NewWatcher(cli *k8sclient.Client, cfg *Config) (*Watcher, error) {
 }
 
 func (w *Watcher) Run() {
+	go w.watchCRD()
+
+	go w.watchPod()
+}
+
+func (w *Watcher) watchCRD() {
 	infor := w.crdConfig()
 
 	infor.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: w.update,
 	})
 
+	logrus.Debug("start watching crd.")
+
 	infor.Run(w.stop)
 
-	logrus.Debug("step here")
+	logrus.Debug("exit watching crd.")
 
 	if !cache.WaitForCacheSync(w.stop, infor.HasSynced) {
-		logrus.Fatalln("cache sync err")
-
-		return
+		logrus.Error("cache sync err")
 	}
 
-	logrus.Debug("watch pod")
-
-	w.watchPod()
-
-	close(w.stopped)
+	close(w.crdWatchStopped)
 }
 
 func (w *Watcher) Exit() {
 	close(w.stop)
 
-	<-w.stopped
+	<-w.crdWatchStopped
+	<-w.podWatchStopped
 }
 
 func (w *Watcher) update(oldObj, newObj interface{}) {
@@ -115,10 +120,10 @@ func (w *Watcher) update(oldObj, newObj interface{}) {
 		return
 	}
 
-	go w.watchCRD(res)
+	go w.checkCRD(res)
 }
 
-func (w *Watcher) watchCRD(res v1.CodeServer) {
+func (w *Watcher) checkCRD(res v1.CodeServer) {
 	h, ok := w.handles[res.Labels[labelType]]
 	if !ok {
 		return
