@@ -2,13 +2,11 @@ package evaluateimpl
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"html/template"
 	"io/ioutil"
 
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 
@@ -23,7 +21,7 @@ func MetaName() string {
 	return metaNameEvaluate
 }
 
-func NewEvaluate(cfg *Config, k8sConfig k8sclient.Config) (evaluate.Evaluate, error) {
+func NewEvaluate(cli *k8sclient.Client, cfg *Config, k8sConfig k8sclient.Config) (evaluate.Evaluate, error) {
 	txtStr, err := ioutil.ReadFile(cfg.CRD.TemplateFile)
 	if err != nil {
 		return nil, err
@@ -36,6 +34,7 @@ func NewEvaluate(cfg *Config, k8sConfig k8sclient.Config) (evaluate.Evaluate, er
 
 	return &evaluateImpl{
 		cfg:         cfg,
+		cli:         cli,
 		k8sConfig:   k8sConfig,
 		crdTemplate: tmpl,
 	}, nil
@@ -43,6 +42,7 @@ func NewEvaluate(cfg *Config, k8sConfig k8sclient.Config) (evaluate.Evaluate, er
 
 type evaluateImpl struct {
 	cfg         *Config
+	cli         *k8sclient.Client
 	k8sConfig   k8sclient.Config
 	crdTemplate *template.Template
 }
@@ -60,16 +60,16 @@ func (impl *evaluateImpl) CreateCustom(ce *domain.CustomEvaluate) error {
 	logrus.Debugf("receive custom evaluate for %s.", s)
 
 	res := new(unstructured.Unstructured)
+
 	if err := impl.getCustomObj(ce, res); err != nil {
 		return err
 	}
 
-	ns := k8sclient.GetNamespace(impl.cfg.CRD.CRDNamespace)
-	_, err := ns.Create(context.TODO(), res, metav1.CreateOptions{})
+	err := impl.cli.CreateCRD(res)
 
 	logrus.Debugf(
 		"gen crd for custom evaluate:%s in %s, err:%v.",
-		s, impl.cfg.CRD.CRDNamespace, err,
+		s, impl.k8sConfig.Namespace, err,
 	)
 
 	return err
@@ -85,12 +85,11 @@ func (impl *evaluateImpl) CreateStandard(se *domain.StandardEvaluate) error {
 		return err
 	}
 
-	ns := k8sclient.GetNamespace(impl.cfg.CRD.CRDNamespace)
-	_, err := ns.Create(context.TODO(), res, metav1.CreateOptions{})
+	err := impl.cli.CreateCRD(res)
 
 	logrus.Debugf(
 		"gen crd for standard evaluate:%s in %s, err:%v.",
-		s, impl.cfg.CRD.CRDNamespace, err,
+		s, impl.k8sConfig.Namespace, err,
 	)
 
 	return err
@@ -152,7 +151,7 @@ func (impl *evaluateImpl) genCrdData(
 		Version:        k8sConfig.Version,
 		CodeServer:     k8sConfig.Kind,
 		Name:           impl.geneMetaName(index),
-		NameSpace:      crd.CRDNamespace,
+		NameSpace:      k8sConfig.Namespace,
 		Image:          crd.CRDImage,
 		CPU:            crd.CRDCpuString(),
 		Memory:         crd.CRDMemoryString(),

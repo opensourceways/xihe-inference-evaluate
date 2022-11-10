@@ -8,7 +8,6 @@ import (
 type CRDConfig struct {
 	CRDImage     string `json:"crd_image"        required:"true"`
 	TemplateFile string `json:"crd_template"     required:"true"`
-	CRDNamespace string `json:"crd_namespace"    required:"true"`
 
 	// Specifies the terminal container port for connection
 	ContainerPort int `json:"container_port"   required:"true"`

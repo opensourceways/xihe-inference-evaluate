@@ -2,13 +2,11 @@ package inferenceimpl
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"html/template"
 	"io/ioutil"
 
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 
@@ -23,7 +21,7 @@ func MetaName() string {
 	return metaNameInference
 }
 
-func NewInference(cfg *Config, k8sConfig k8sclient.Config) (inference.Inference, error) {
+func NewInference(cli *k8sclient.Client, cfg *Config, k8sConfig k8sclient.Config) (inference.Inference, error) {
 	txtStr, err := ioutil.ReadFile(cfg.CRD.TemplateFile)
 	if err != nil {
 		return nil, err
@@ -36,6 +34,7 @@ func NewInference(cfg *Config, k8sConfig k8sclient.Config) (inference.Inference,
 
 	return inferenceImpl{
 		cfg:         cfg,
+		cli:         cli,
 		k8sConfig:   k8sConfig,
 		crdTemplate: tmpl,
 	}, nil
@@ -43,6 +42,7 @@ func NewInference(cfg *Config, k8sConfig k8sclient.Config) (inference.Inference,
 
 type inferenceImpl struct {
 	cfg         *Config
+	cli         *k8sclient.Client
 	k8sConfig   k8sclient.Config
 	crdTemplate *template.Template
 }
@@ -65,12 +65,11 @@ func (impl inferenceImpl) Create(infer *domain.Inference) error {
 		return err
 	}
 
-	ns := k8sclient.GetNamespace(impl.cfg.CRD.CRDNamespace)
-	_, err := ns.Create(context.TODO(), res, metav1.CreateOptions{})
+	err := impl.cli.CreateCRD(res)
 
 	logrus.Debugf(
 		"create inference:%s in %s, err:%v.",
-		s, impl.cfg.CRD.CRDNamespace, err,
+		s, impl.k8sConfig.Namespace, err,
 	)
 
 	return err
@@ -80,21 +79,19 @@ func (impl inferenceImpl) ExtendSurvivalTime(infer *domain.InferenceIndex, timeT
 	s := impl.inferenceIndexString(infer)
 	logrus.Debugf("extend inference for %s to %d.", s, timeToExtend)
 
-	ns := k8sclient.GetNamespace(impl.cfg.CRD.CRDNamespace)
-
-	get, err := ns.Get(context.TODO(), impl.geneMetaName(infer), metav1.GetOptions{})
+	crd, err := impl.cli.GetCRD(impl.geneMetaName(infer))
 	if err != nil {
 		return err
 	}
 
-	if sp, ok := get.Object["spec"]; ok {
+	if sp, ok := crd.Object["spec"]; ok {
 		if spc, ok := sp.(map[string]interface{}); ok {
 			spc["increaseRecycleSeconds"] = true
 			spc["recycleAfterSeconds"] = timeToExtend
 		}
 	}
 
-	_, err = ns.Update(context.TODO(), get, metav1.UpdateOptions{})
+	err = impl.cli.UpdateCRD(crd)
 
 	logrus.Debugf("extend inference for %s to %d, err:%v.", s, timeToExtend, err)
 
@@ -127,7 +124,7 @@ func (impl inferenceImpl) getObj(
 		Version:        k8sConfig.Version,
 		CodeServer:     k8sConfig.Kind,
 		Name:           impl.geneMetaName(&infer.InferenceIndex),
-		NameSpace:      crd.CRDNamespace,
+		NameSpace:      k8sConfig.Namespace,
 		Image:          crd.CRDImage,
 		CPU:            crd.CRDCpuString(),
 		Memory:         crd.CRDMemoryString(),

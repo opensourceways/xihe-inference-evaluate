@@ -4,6 +4,7 @@ type Config struct {
 	Kind           string `json:"kind"             required:"true"`
 	Group          string `json:"group"            required:"true"`
 	Version        string `json:"version"          required:"true"`
+	Namespace      string `json:"namespace"        required:"true"`
 	KubeConfigFile string `json:"kube_config_file" required:"true"`
 }
 

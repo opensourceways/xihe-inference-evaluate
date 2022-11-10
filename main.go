@@ -63,19 +63,19 @@ func main() {
 		logrus.Fatalf("load config, err:%s", err.Error())
 	}
 
-	err := k8sclient.Init(&cfg.K8sClient)
+	cli, err := k8sclient.Init(&cfg.K8sClient)
 	if err != nil {
 		logrus.Fatalf("k8s client init, err:%s", err.Error())
 	}
 
 	// evaluate
-	evaluate, err := evaluateimpl.NewEvaluate(&cfg.Evaluate, cfg.K8sClient)
+	evaluate, err := evaluateimpl.NewEvaluate(&cli, &cfg.Evaluate, cfg.K8sClient)
 	if err != nil {
 		logrus.Fatalf("new evaluate service failed, err:%s", err.Error())
 	}
 
 	// inference
-	inference, err := inferenceimpl.NewInference(&cfg.Inference, cfg.K8sClient)
+	inference, err := inferenceimpl.NewInference(&cli, &cfg.Inference, cfg.K8sClient)
 	if err != nil {
 		logrus.Fatalf("new inference service failed, err:%s", err.Error())
 	}
@@ -84,7 +84,7 @@ func main() {
 	controller.Init(log)
 
 	// watcher
-	w, err := watchimpl.NewWatcher(&cfg.Watch)
+	w, err := watchimpl.NewWatcher(&cli, &cfg.Watch)
 	if err != nil {
 		logrus.Fatalf("new watch service failed, err:%s", err.Error())
 	}
