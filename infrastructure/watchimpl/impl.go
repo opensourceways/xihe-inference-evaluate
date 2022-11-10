@@ -27,8 +27,10 @@ type Watcher struct {
 	evaluateClient  *rpcclient.EvaluateClient
 	inferenceClient *rpcclient.InferenceClient
 
-	handles map[string]func(map[string]string, statusDetail)
-	stopCh  chan struct{}
+	podNamePrifixes []string
+	handles         map[string]func(map[string]string, statusDetail)
+	stop            chan struct{}
+	stopped         chan struct{}
 }
 
 type statusDetail struct {
@@ -49,6 +51,8 @@ func NewWatcher(cli *k8sclient.Client, cfg *Config) (*Watcher, error) {
 
 	w := &Watcher{
 		cli:             cli,
+		stop:            make(chan struct{}),
+		stopped:         make(chan struct{}),
 		evaluateClient:  evaluateClient,
 		inferenceClient: inferenceClient,
 	}
@@ -58,25 +62,38 @@ func NewWatcher(cli *k8sclient.Client, cfg *Config) (*Watcher, error) {
 		evaluateimpl.MetaName():  w.handleEvaluate,
 	}
 
+	w.podNamePrifixes = []string{
+		inferenceimpl.MetaName(),
+		evaluateimpl.MetaName(),
+	}
+
 	return w, nil
 }
 
 func (w *Watcher) Run() {
 	infor := w.crdConfig()
+
 	infor.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: w.update,
 	})
 
-	w.stopCh = make(chan struct{})
+	infor.Run(w.stop)
 
-	infor.Run(w.stopCh)
-
-	if !cache.WaitForCacheSync(w.stopCh, infor.HasSynced) {
+	if !cache.WaitForCacheSync(w.stop, infor.HasSynced) {
 		logrus.Fatalln("cache sync err")
+
 		return
 	}
 
-	<-w.stopCh
+	w.watchPod()
+
+	close(w.stopped)
+}
+
+func (w *Watcher) Exit() {
+	close(w.stop)
+
+	<-w.stopped
 }
 
 func (w *Watcher) update(oldObj, newObj interface{}) {
@@ -105,8 +122,11 @@ func (w *Watcher) watchCRD(res v1.CodeServer) {
 	}
 
 	recycled, endPoint := w.checkCRDStatus(&res)
+
 	if recycled {
-		w.deleteCRD(&res)
+		if err := w.cli.DeleteCRD(res.GetName()); err != nil {
+			logrus.Errorf("watch delete crd(%s) err: %s", res.GetName(), err.Error())
+		}
 
 		return
 	}
@@ -139,12 +159,6 @@ func (w *Watcher) checkCRDStatus(res *v1.CodeServer) (recycled bool, endPoint st
 	}
 
 	return
-}
-
-func (w *Watcher) deleteCRD(res *v1.CodeServer) {
-	if err := w.cli.DeleteCRD(res.GetName()); err != nil {
-		logrus.Errorf("watch delete crd err: %s", err.Error())
-	}
 }
 
 func (w *Watcher) handleInference(labels map[string]string, status statusDetail) {
@@ -212,8 +226,4 @@ func (w *Watcher) crdConfig() cache.SharedIndexInformer {
 		0,
 		cache.Indexers{},
 	)
-}
-
-func (w *Watcher) Exit() {
-	close(w.stopCh)
 }
