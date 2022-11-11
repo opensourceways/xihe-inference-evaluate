@@ -47,3 +47,7 @@ spec:
       value: {{.ObsBucket}}
     - name: OBS_LFS_PATH
       value: {{.ObsLfsPath}}
+    - name: GRADIO_SERVER_PORT
+      value: "{{.ContainerPort}}"
+    - name: GRADIO_SERVER_NAME
+      value: "0.0.0.0"
