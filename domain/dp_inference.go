@@ -6,10 +6,6 @@ import (
 	"strings"
 )
 
-const (
-	resourceProject = "project"
-)
-
 var (
 	reName = regexp.MustCompile("^[a-zA-Z0-9_-]+$")
 )
@@ -39,7 +35,7 @@ type ProjectName interface {
 }
 
 func NewProjectName(v string) (ProjectName, error) {
-	if v == "" || !strings.HasPrefix(v, resourceProject) {
+	if v == "" {
 		return nil, errors.New("invalid project name")
 	}
 
