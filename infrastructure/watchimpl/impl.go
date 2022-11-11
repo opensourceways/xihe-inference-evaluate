@@ -137,9 +137,11 @@ func (w *Watcher) checkCRD(res v1.CodeServer) {
 	recycled, endPoint := w.checkCRDStatus(&res)
 
 	if recycled {
-		if err := w.cli.DeleteCRD(res.GetName()); err != nil {
-			logrus.Errorf("watch delete crd(%s) err: %s", res.GetName(), err.Error())
-		}
+		/*
+			if err := w.cli.DeleteCRD(res.GetName()); err != nil {
+				logrus.Errorf("watch delete crd(%s) err: %s", res.GetName(), err.Error())
+			}
+		*/
 
 		return
 	}
