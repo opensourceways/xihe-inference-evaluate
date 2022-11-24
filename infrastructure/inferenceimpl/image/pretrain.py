@@ -31,7 +31,6 @@ def _load_config(path):
         data = json.load(f)
 
         v = data.get("model_path")
-        #if v is not None and len(v) > 0:
         for item in v:
             result.append(_parse_model_path(item))
 
