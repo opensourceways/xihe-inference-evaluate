@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euox pipefail
+set -euo pipefail
 
 export PATH=/root/.local/bin:$PATH
 
@@ -13,7 +13,7 @@ obs_bucket=${OBS_BUCKET}
 
 # workspace
 dir=$(pwd)
-work_dir=$dir/workspace
+work_dir=/workspace
 test -d $work_dir || mkdir $work_dir
 cd $work_dir
 

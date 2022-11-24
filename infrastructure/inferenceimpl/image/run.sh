@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euox pipefail
+set -euo pipefail
 
 gitlab_endpoint=${GITLAB_ENDPOINT}
 xihe_user=${XIHE_USER}
@@ -20,7 +20,7 @@ app=app.py
 
 # workspace
 dir=$(pwd)
-work_dir=$dir/workspace
+work_dir=/workspace
 test -d $work_dir || mkdir $work_dir
 cd $work_dir
 
@@ -30,7 +30,14 @@ download_model() {
     local repo=$2
     local file=$3
 
-    git clone $repo_url/${owner}/${repo}
+    if [ ! -d $repo ]; then
+        git clone $repo_url/${owner}/${repo}
+    fi
+
+    if [ ! -e $file ]; then
+        echo "no model file: $file"
+        exit 1
+    fi
 
     # check if lfs
     sha=$(sed -n '/^oid sha256:.\{64\}$/p' "$file")
@@ -67,19 +74,18 @@ fi
 f="./$inference_dir/config.json"
 
 if [ -e "$f" -a -s "$f" ]; then
-    v=$(python3 $dir/pretrain.py $f)
+    mf=$work_dir/dependent_models
+
+    python3 $dir/pretrain.py $f > $mf 2>&1
     if [ $? -ne 0 ]; then
-        echo $v
+        echo $(cat $mf)
         exit 1
     fi
 
-    if [ -n "$v" ]; then
-        owner=$(echo $v | sed -n '1p')
-        repo=$(echo $v | sed -n '2p')
-        pretain_file=$(echo $v | sed -n '3p')
-
-        download_model $owner $repo $pretain_file
-    fi
+    while read line;
+    do
+        download_model $line
+    done < $mf
 fi
 
 # run

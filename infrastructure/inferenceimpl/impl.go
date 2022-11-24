@@ -128,7 +128,7 @@ func (impl inferenceImpl) getObj(
 		Image:          crd.CRDImage,
 		CPU:            crd.CRDCpuString(),
 		Memory:         crd.CRDMemoryString(),
-		StorageSize:    10,
+		StorageSize:    20,
 		RecycleSeconds: infer.SurvivalTime,
 		Labels:         impl.geneLabels(infer),
 		ContainerPort:  crd.CRDContainerPortString(),

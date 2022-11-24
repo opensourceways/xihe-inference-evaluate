@@ -5,39 +5,44 @@ import json
 import sys
 
 
-_Pretrain = namedtuple("Pretrain", ["owner", "repo", "file"])
+_ModelPath = namedtuple("ModelPath", ["owner", "repo", "file"])
 
 
-class _InvalidPretrain(Exception):
+class _InvalidModelPath(Exception):
     pass
 
 
-def _parse_pretrain(path):
+def _parse_model_path(path):
     if path == "":
         return None
 
     s = path.strip().strip("/")
     v = s.split("/")
     if len(v) < 3:
-        raise(_InvalidPretrain("invalid pretrain path"))
+        raise(_InvalidModelPath("invalid model path"))
 
-    return _Pretrain(v[0], v[1], "/".join(v[1:]))
+    return _ModelPath(v[0], v[1], "/".join(v[1:]))
 
 
 def _load_config(path):
+    result = []
+
     with open(path, 'r') as f:
         data = json.load(f)
 
-        return _parse_pretrain(data.get("pretrain"))
+        v = data.get("model_path")
+        #if v is not None and len(v) > 0:
+        for item in v:
+            result.append(_parse_model_path(item))
+
+    return result
 
 
 def load(path):
-    v = _load_config(path)
+    r = _load_config(path)
 
-    if v is None:
-        return
-
-    print("%s\n%s\n%s" % v)
+    for v in r:
+        print("%s %s %s" % v)
 
 
 if __name__ == "__main__":
