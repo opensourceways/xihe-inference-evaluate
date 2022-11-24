@@ -148,6 +148,39 @@ func (w *Watcher) checkCRD(res v1.CodeServer) {
 
 	if endPoint != "" {
 		h(res.ObjectMeta.Labels, statusDetail{accessUrl: endPoint})
+		w.updateCRDBoundStatus(res)
+	}
+}
+
+func (w *Watcher) updateCRDBoundStatus(res v1.CodeServer) {
+	flag := false
+
+	for k := range res.Status.Conditions {
+		cond := &res.Status.Conditions[k]
+		if cond.Type == v1.ServerBound && cond.Status == corev1.ConditionFalse {
+			flag = true
+			cond.Status = corev1.ConditionTrue
+			cond.Reason = "code server hao been bound"
+			break
+		}
+	}
+	if flag {
+		var object unstructured.Unstructured
+		bys, err := json.Marshal(&res)
+		if err != nil {
+			logrus.Errorf("update marshal error:%s", err.Error())
+			return
+		}
+		err = json.Unmarshal(bys, &object)
+		if err != nil {
+			logrus.Errorf("update unmarshal error:%s", err.Error())
+			return
+		}
+		err = w.cli.UpdateCRD(&object)
+
+		if err != nil {
+			logrus.Errorf("update CRD failed, err:%v", err)
+		}
 	}
 }
 
