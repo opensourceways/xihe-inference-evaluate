@@ -18,7 +18,7 @@ COPY ./pretrain.py ./pretrain.py
 COPY --from=BUILDER /opt/build/obsutil /usr/src/app/obsutil
 
 RUN pip install --upgrade -i https://pypi.tuna.tsinghua.edu.cn/simple pip
-RUN pip install --user -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
+RUN pip install --default-timeout=1000 --user -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 RUN apt-get update
 RUN apt-get install ffmpeg libsm6 libxext6 -y
 RUN apt install libgl1-mesa-glx
