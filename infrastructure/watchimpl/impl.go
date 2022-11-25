@@ -179,14 +179,15 @@ func (w *Watcher) updateCRDBoundStatus(res *v1.CodeServer) {
 		return
 	}
 
-	object := make(map[string]interface{})
-	if err = json.Unmarshal(b, &object); err != nil {
+	// unstructured.Unstructured implements the method of UnmarshalJSON
+	object := new(unstructured.Unstructured)
+	if err = json.Unmarshal(b, object); err != nil {
 		logrus.Errorf("update unmarshal error:%s", err.Error())
 
 		return
 	}
 
-	if err = w.cli.UpdateCRD(&unstructured.Unstructured{Object: object}); err != nil {
+	if err = w.cli.UpdateCRD(object); err != nil {
 		logrus.Errorf("update CRD failed, err:%v", err)
 	}
 }
