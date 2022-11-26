@@ -116,12 +116,12 @@ func (cli *Client) FailedPodLog(pod *corev1.Pod) (string, error) {
 }
 
 func (cli *Client) getFailedPodLog(pod *corev1.Pod, previous bool) (string, error) {
-	var opt *corev1.PodLogOptions
+	var opt corev1.PodLogOptions
 	if previous {
-		opt = &corev1.PodLogOptions{Previous: true}
+		opt.Previous = true
 	}
 
-	v := cli.podCli.GetLogs(pod.GetName(), opt)
+	v := cli.podCli.GetLogs(pod.GetName(), &opt)
 
 	s, err := v.Stream(context.TODO())
 	if err != nil {
