@@ -104,8 +104,12 @@ func (cli *Client) ListPods() ([]corev1.Pod, error) {
 func (cli *Client) FailedPodLog(pod *corev1.Pod) (string, error) {
 	v, err := cli.getFailedPodLog(pod, false)
 
-	if v1, err1 := cli.getFailedPodLog(pod, true); err1 == nil {
-		v += ". more detail: " + v1
+	if v1, err1 := cli.getFailedPodLog(pod, true); err1 == nil && v1 != "" {
+		if v == "" {
+			v = v1
+		} else {
+			v += ". more detail: " + v1
+		}
 	}
 
 	return v, err
