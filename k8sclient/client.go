@@ -101,17 +101,35 @@ func (cli *Client) ListPods() ([]corev1.Pod, error) {
 	return v.Items, nil
 }
 
-func (cli *Client) FailedPodLog(pod *corev1.Pod, buf *bytes.Buffer) error {
-	v := cli.podCli.GetLogs(pod.GetName(), &corev1.PodLogOptions{Previous: true})
+func (cli *Client) FailedPodLog(pod *corev1.Pod) (string, error) {
+	v, err := cli.getFailedPodLog(pod, false)
+
+	if v1, err1 := cli.getFailedPodLog(pod, true); err1 == nil {
+		v += "more detail: " + v1
+	}
+
+	return v, err
+}
+
+func (cli *Client) getFailedPodLog(pod *corev1.Pod, previous bool) (string, error) {
+	var opt *corev1.PodLogOptions
+	if previous {
+		opt = &corev1.PodLogOptions{Previous: true}
+	}
+
+	v := cli.podCli.GetLogs(pod.GetName(), opt)
 
 	s, err := v.Stream(context.TODO())
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	_, err = io.Copy(buf, s)
+	buf := new(bytes.Buffer)
+	if _, err = io.Copy(buf, s); err == nil {
+		return buf.String(), nil
+	}
 
-	return err
+	return "", err
 }
 
 func (cli *Client) IsPodFailed(pod *corev1.Pod) bool {

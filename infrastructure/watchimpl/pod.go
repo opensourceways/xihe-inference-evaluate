@@ -1,7 +1,6 @@
 package watchimpl
 
 import (
-	"bytes"
 	"strings"
 	"time"
 
@@ -56,13 +55,15 @@ func (w *Watcher) checkPods(pods []corev1.Pod) {
 			continue
 		}
 
-		buf := new(bytes.Buffer)
-
-		if err := w.cli.FailedPodLog(pod, buf); err != nil {
+		podLog, err := w.cli.FailedPodLog(pod)
+		if err != nil {
 			logrus.Errorf(
 				"get log of pod(%s) failed, err:%s",
 				pod.GetName(), err.Error(),
 			)
+		}
+		if podLog == "" {
+			podLog = "unknown error for pod"
 		}
 
 		labels := w.deleteCRDOfPod(pod)
@@ -71,15 +72,7 @@ func (w *Watcher) checkPods(pods []corev1.Pod) {
 		}
 
 		if h, ok := w.handles[labels[labelType]]; ok {
-			d := statusDetail{}
-
-			if buf.Len() == 0 {
-				d.errorMsg = "unknown error"
-			} else {
-				d.errorMsg = buf.String()
-			}
-
-			h(labels, d)
+			h(labels, statusDetail{errorMsg: podLog})
 		}
 	}
 }
