@@ -2,11 +2,15 @@
 
 set -euo pipefail
 
+pretrain_file=$(pwd)/pretrain.py
+
 gitlab_endpoint=${GITLAB_ENDPOINT}
 xihe_user=${XIHE_USER}
 xihe_user_token=${XIHE_USER_TOKEN}
 project_name=${PROJECT_NAME}
 last_commit=${LAST_COMMIT}
+
+repo_url=http://${xihe_user}:${xihe_user_token}@${gitlab_endpoint#"http://"}
 
 obs_ak=${OBS_AK}
 obs_sk=${OBS_SK}
@@ -14,21 +18,23 @@ obs_endpoint=${OBS_ENDPOINT}
 obs_util=${OBS_UTIL_PATH}
 obs_lfs_path=${OBS_BUCKET}/${OBS_LFS_PATH} #$OBS_LFS_PATH has no suffix of /.
 
-inference_dir=$project_name/inference
-repo_url=http://${xihe_user}:${xihe_user_token}@${gitlab_endpoint#"http://"}
-app=app.py
+$obs_util config -i=$obs_ak -k=$obs_sk -e=$obs_endpoint
 
-# workspace
-dir=$(pwd)
+app=app.py
 work_dir=/workspace
-test -d $work_dir || mkdir $work_dir
-cd $work_dir
+inference_dir=$work_dir/$project_name/inference
 
 # helper
 download_model() {
     local owner=$1
     local repo=$2
     local file=$3
+
+    cd $work_dir
+
+    test -d $owner || mkdir $owner
+
+    cd $owner
 
     if [ ! -d $repo ]; then
         git clone $repo_url/${owner}/${repo}
@@ -42,15 +48,9 @@ download_model() {
     # check if lfs
     sha=$(sed -n '/^oid sha256:.\{64\}$/p' "$file")
     if [ -n "$sha" ]; then
-        # lfs file
-
-        $obs_util config -i=$obs_ak -k=$obs_sk -e=$obs_endpoint
-
-        # cp file
-        # ./obsutil cp obs://bucket-test/test1.txt  /test.txt
-        # sha[:2], sha[2:4], sha[4:]
         sha=${sha#"oid sha256:"}
-        dst=$work_dir/$inference_dir/$(basename $file)
+        dst=$inference_dir/$(basename $file)
+
         $obs_util cp obs://$obs_lfs_path/${sha:0:2}/${sha:2:2}/${sha:4} $dst > /dev/null 2>&1
 
         if [ ! -e "$dst" ]; then
@@ -63,6 +63,10 @@ download_model() {
     fi
 }
 
+# workspace
+test -d $work_dir || mkdir $work_dir
+cd $work_dir
+
 # download project
 git clone $repo_url/$xihe_user/$project_name
 
@@ -71,12 +75,13 @@ if [ ! -e "$inference_dir/$app" ]; then
     exit 1
 fi
 
-f="./$inference_dir/config.json"
+# download dependents
+f="$inference_dir/config.json"
 
 if [ -e "$f" -a -s "$f" ]; then
     mf=$work_dir/dependent_models
 
-    python3 $dir/pretrain.py $f > $mf 2>&1
+    python3 $pretrain_file $f > $mf 2>&1
     if [ $? -ne 0 ]; then
         echo $(cat $mf)
         exit 1
