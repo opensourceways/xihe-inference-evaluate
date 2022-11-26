@@ -105,7 +105,7 @@ func (cli *Client) FailedPodLog(pod *corev1.Pod) (string, error) {
 	v, err := cli.getFailedPodLog(pod, false)
 
 	if v1, err1 := cli.getFailedPodLog(pod, true); err1 == nil {
-		v += "more detail: " + v1
+		v += ". more detail: " + v1
 	}
 
 	return v, err
@@ -125,6 +125,7 @@ func (cli *Client) getFailedPodLog(pod *corev1.Pod, previous bool) (string, erro
 	}
 
 	buf := new(bytes.Buffer)
+
 	if _, err = io.Copy(buf, s); err == nil {
 		return buf.String(), nil
 	}
