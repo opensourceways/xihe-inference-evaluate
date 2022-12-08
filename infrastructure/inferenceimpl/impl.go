@@ -45,7 +45,7 @@ func NewInference(cli *k8sclient.Client, cfg *Config, k8sConfig k8sclient.Config
 
 	rpcCli, err := rpcclient.NewInferenceClient(cfg.RPCEndpoint)
 	if err != nil {
-		return nil, fmt.Errorf("new evaluate rpc client error: %s", err.Error())
+		return nil, fmt.Errorf("new inference rpc client error: %s", err.Error())
 	}
 
 	return inferenceImpl{
