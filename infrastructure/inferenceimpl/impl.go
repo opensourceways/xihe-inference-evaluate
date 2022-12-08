@@ -43,7 +43,7 @@ func NewInference(cli *k8sclient.Client, cfg *Config, k8sConfig k8sclient.Config
 		return nil, err
 	}
 
-	rpccli, err := rpcclient.NewInferenceClient(cfg.RPCEndpoint)
+	rpcCli, err := rpcclient.NewInferenceClient(cfg.RPCEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("new evaluate rpc client error: %s", err.Error())
 	}
@@ -51,7 +51,7 @@ func NewInference(cli *k8sclient.Client, cfg *Config, k8sConfig k8sclient.Config
 	return inferenceImpl{
 		cfg:         cfg,
 		cli:         cli,
-		rpccli:      rpccli,
+		rpcCli:      rpcCli,
 		k8sConfig:   k8sConfig,
 		crdTemplate: tmpl,
 	}, nil
@@ -60,7 +60,7 @@ func NewInference(cli *k8sclient.Client, cfg *Config, k8sConfig k8sclient.Config
 type inferenceImpl struct {
 	cfg         *Config
 	cli         *k8sclient.Client
-	rpccli      *rpcclient.InferenceClient
+	rpcCli      *rpcclient.InferenceClient
 	k8sConfig   k8sclient.Config
 	crdTemplate *template.Template
 }
@@ -129,7 +129,7 @@ func (impl inferenceImpl) NotifyResult(labels map[string]string, status domain.C
 		AccessURL: status.AccessUrl,
 	}
 
-	if err := impl.rpccli.SetInferenceInfo(&index, &info); err != nil {
+	if err := impl.rpcCli.SetInferenceInfo(&index, &info); err != nil {
 		logrus.Errorf("call inference rpc error:%s", err.Error())
 	} else {
 		logrus.Debugf(

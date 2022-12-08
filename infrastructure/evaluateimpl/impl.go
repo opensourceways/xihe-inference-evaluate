@@ -41,7 +41,7 @@ func NewEvaluate(cli *k8sclient.Client, cfg *Config, k8sConfig k8sclient.Config)
 		return nil, err
 	}
 
-	rpccli, err := rpcclient.NewEvaluateClient(cfg.RPCEndpoint)
+	rpcCli, err := rpcclient.NewEvaluateClient(cfg.RPCEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("new evaluate rpc client error: %s", err.Error())
 	}
@@ -49,7 +49,7 @@ func NewEvaluate(cli *k8sclient.Client, cfg *Config, k8sConfig k8sclient.Config)
 	return &evaluateImpl{
 		cfg:         cfg,
 		cli:         cli,
-		rpccli:      rpccli,
+		rpcCli:      rpcCli,
 		k8sConfig:   k8sConfig,
 		crdTemplate: tmpl,
 	}, nil
@@ -58,7 +58,7 @@ func NewEvaluate(cli *k8sclient.Client, cfg *Config, k8sConfig k8sclient.Config)
 type evaluateImpl struct {
 	cfg         *Config
 	cli         *k8sclient.Client
-	rpccli      *rpcclient.EvaluateClient
+	rpcCli      *rpcclient.EvaluateClient
 	k8sConfig   k8sclient.Config
 	crdTemplate *template.Template
 }
@@ -123,7 +123,7 @@ func (impl *evaluateImpl) NotifyResult(labels map[string]string, status domain.C
 		AccessURL: status.AccessUrl,
 	}
 
-	if err := impl.rpccli.SetEvaluateInfo(&index, &info); err != nil {
+	if err := impl.rpcCli.SetEvaluateInfo(&index, &info); err != nil {
 		logrus.Errorf("call evaluate rpc error: %s", err.Error())
 	} else {
 		logrus.Debugf(
