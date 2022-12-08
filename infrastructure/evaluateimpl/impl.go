@@ -123,8 +123,7 @@ func (impl *evaluateImpl) NotifyResult(labels map[string]string, status domain.C
 		AccessURL: status.AccessUrl,
 	}
 
-	err := impl.rpccli.SetEvaluateInfo(&index, &info)
-	if err != nil {
+	if err := impl.rpccli.SetEvaluateInfo(&index, &info); err != nil {
 		logrus.Errorf("call evaluate rpc error: %s", err.Error())
 	} else {
 		logrus.Debugf(
@@ -143,7 +142,7 @@ func (impl *evaluateImpl) geneLabels(eva *domain.EvaluateIndex) map[string]strin
 	return map[string]string{
 		"type":        metaNameEvaluate,
 		keyId:         eva.Id,
-		keyUser:       eva.Project.Owner.Account(),
+		keyUser:       keyUser + eva.Project.Owner.Account(),
 		keyProjectId:  eva.Project.Id,
 		keyTrainingId: eva.TrainingId,
 	}
