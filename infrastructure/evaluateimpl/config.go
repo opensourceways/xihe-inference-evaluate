@@ -14,8 +14,9 @@ type configSetDefault interface {
 }
 
 type Config struct {
-	OBS inferenceimpl.OBSConfig `json:"-"`
-	CRD config.CRDConfig        `json:"crd" required:"true"`
+	OBS         inferenceimpl.OBSConfig `json:"-"`
+	CRD         config.CRDConfig        `json:"crd"              required:"true"`
+	RPCEndpoint string                  `json:"rpc_endpiont"     required:"true"`
 }
 
 func (cfg *Config) configItems() []interface{} {

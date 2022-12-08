@@ -18,6 +18,7 @@ type configSetDefault interface {
 type Config struct {
 	OBS            OBSConfig        `json:"obs"              required:"true"`
 	CRD            config.CRDConfig `json:"crd"              required:"true"`
+	RPCEndpoint    string           `json:"rpc_endpiont"     required:"true"`
 	GitlabEndpoint string           `json:"gitlab_endpiont"  required:"true"`
 }
 

@@ -5,7 +5,6 @@ import (
 
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/evaluateimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/inferenceimpl"
-	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/watchimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/k8sclient"
 )
 
@@ -36,7 +35,6 @@ type ConfigSetDefault interface {
 }
 
 type Config struct {
-	Watch     watchimpl.Config     `json:"watch"      required:"true"`
 	Evaluate  evaluateimpl.Config  `json:"evaluate"   required:"true"`
 	Inference inferenceimpl.Config `json:"inference"  required:"true"`
 	K8sClient k8sclient.Config     `json:"k8s"        required:"true"`
@@ -46,7 +44,6 @@ func (cfg *Config) configItems() []interface{} {
 	return []interface{}{
 		&cfg.Inference,
 		&cfg.Evaluate,
-		&cfg.Watch,
 		&cfg.K8sClient,
 	}
 }

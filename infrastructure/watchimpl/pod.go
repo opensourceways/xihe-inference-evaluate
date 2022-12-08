@@ -6,6 +6,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/opensourceways/xihe-inference-evaluate/domain"
 )
 
 const (
@@ -72,7 +74,7 @@ func (w *Watcher) checkPods(pods []corev1.Pod) {
 		}
 
 		if h, ok := w.handles[labels[labelType]]; ok {
-			h(labels, statusDetail{errorMsg: podLog})
+			h(labels, domain.ContainerDetail{ErrorMsg: podLog})
 		}
 	}
 }

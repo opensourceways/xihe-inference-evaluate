@@ -17,3 +17,8 @@ type ResourceIndex struct {
 	Owner Account
 	Id    string
 }
+
+type ContainerDetail struct {
+	AccessUrl string
+	ErrorMsg  string
+}

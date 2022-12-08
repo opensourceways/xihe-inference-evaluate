@@ -10,6 +10,7 @@ import (
 
 	"github.com/opensourceways/xihe-inference-evaluate/config"
 	"github.com/opensourceways/xihe-inference-evaluate/controller"
+	"github.com/opensourceways/xihe-inference-evaluate/domain"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/evaluateimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/inferenceimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/watchimpl"
@@ -84,10 +85,13 @@ func main() {
 	controller.Init(log)
 
 	// watcher
-	w, err := watchimpl.NewWatcher(&cli, &cfg.Watch)
-	if err != nil {
-		logrus.Fatalf("new watch service failed, err:%s", err.Error())
-	}
+	w := watchimpl.NewWatcher(
+		&cli,
+		map[string]func(map[string]string, domain.ContainerDetail){
+			inferenceimpl.MetaName(): inference.NotifyResult,
+			evaluateimpl.MetaName():  evaluate.NotifyResult,
+		},
+	)
 
 	w.Run()
 	defer w.Exit()

@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
+	"strings"
 
+	rpcclient "github.com/opensourceways/xihe-grpc-protocol/grpc/client"
+	rpcinference "github.com/opensourceways/xihe-grpc-protocol/grpc/inference"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
@@ -15,13 +18,21 @@ import (
 	"github.com/opensourceways/xihe-inference-evaluate/k8sclient"
 )
 
-const metaNameInference = "inference"
+const (
+	keyId             = "id"
+	keyUser           = "user"
+	keyProjectId      = "project_id"
+	keyLastCommit     = "last_commit"
+	metaNameInference = "inference"
+)
 
 func MetaName() string {
 	return metaNameInference
 }
 
-func NewInference(cli *k8sclient.Client, cfg *Config, k8sConfig k8sclient.Config) (inference.Inference, error) {
+func NewInference(cli *k8sclient.Client, cfg *Config, k8sConfig k8sclient.Config) (
+	inference.Inference, error,
+) {
 	txtStr, err := ioutil.ReadFile(cfg.CRD.TemplateFile)
 	if err != nil {
 		return nil, err
@@ -32,9 +43,15 @@ func NewInference(cli *k8sclient.Client, cfg *Config, k8sConfig k8sclient.Config
 		return nil, err
 	}
 
+	rpccli, err := rpcclient.NewInferenceClient(cfg.RPCEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("new evaluate rpc client error: %s", err.Error())
+	}
+
 	return inferenceImpl{
 		cfg:         cfg,
 		cli:         cli,
+		rpccli:      rpccli,
 		k8sConfig:   k8sConfig,
 		crdTemplate: tmpl,
 	}, nil
@@ -43,6 +60,7 @@ func NewInference(cli *k8sclient.Client, cfg *Config, k8sConfig k8sclient.Config
 type inferenceImpl struct {
 	cfg         *Config
 	cli         *k8sclient.Client
+	rpccli      *rpcclient.InferenceClient
 	k8sConfig   k8sclient.Config
 	crdTemplate *template.Template
 }
@@ -98,17 +116,41 @@ func (impl inferenceImpl) ExtendSurvivalTime(infer *domain.InferenceIndex, timeT
 	return err
 }
 
+func (impl inferenceImpl) NotifyResult(labels map[string]string, status domain.ContainerDetail) {
+	index := rpcinference.InferenceIndex{
+		Id:         labels[keyId],
+		User:       strings.TrimPrefix(labels[keyUser], keyUser),
+		ProjectId:  labels[keyProjectId],
+		LastCommit: labels[keyLastCommit],
+	}
+
+	info := rpcinference.InferenceInfo{
+		Error:     status.ErrorMsg,
+		AccessURL: status.AccessUrl,
+	}
+
+	if err := impl.rpccli.SetInferenceInfo(&index, &info); err != nil {
+		logrus.Errorf("call inference rpc error:%s", err.Error())
+	} else {
+		logrus.Debugf(
+			"call rpc to set inference(%s/%s/%s/%s) info:(%s/%s)",
+			index.User, index.ProjectId, index.LastCommit, index.Id,
+			info.Error, info.AccessURL,
+		)
+	}
+}
+
 func (impl inferenceImpl) geneMetaName(index *domain.InferenceIndex) string {
 	return fmt.Sprintf("%s-%s", metaNameInference, index.Id)
 }
 
 func (impl inferenceImpl) geneLabels(infer *domain.Inference) map[string]string {
 	return map[string]string{
-		"id":          infer.Id,
 		"type":        metaNameInference,
-		"user":        infer.Project.Owner.Account(),
-		"project_id":  infer.Project.Id,
-		"last_commit": infer.LastCommit,
+		keyId:         infer.Id,
+		keyUser:       keyUser + infer.Project.Owner.Account(),
+		keyProjectId:  infer.Project.Id,
+		keyLastCommit: infer.LastCommit,
 	}
 }
 

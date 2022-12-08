@@ -3,13 +3,9 @@ package watchimpl
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"sync"
 
 	v1 "github.com/opensourceways/code-server-operator/api/v1alpha1"
-	rpcclient "github.com/opensourceways/xihe-grpc-protocol/grpc/client"
-	"github.com/opensourceways/xihe-grpc-protocol/grpc/evaluate"
-	"github.com/opensourceways/xihe-grpc-protocol/grpc/inference"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,18 +14,17 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/cache"
 
+	"github.com/opensourceways/xihe-inference-evaluate/domain"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/evaluateimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/infrastructure/inferenceimpl"
 	"github.com/opensourceways/xihe-inference-evaluate/k8sclient"
 )
 
 type Watcher struct {
-	cli             *k8sclient.Client
-	evaluateClient  *rpcclient.EvaluateClient
-	inferenceClient *rpcclient.InferenceClient
+	cli *k8sclient.Client
 
 	podNamePrifixes []string
-	handles         map[string]func(map[string]string, statusDetail)
+	handles         map[string]func(map[string]string, domain.ContainerDetail)
 	stop            chan struct{}
 	wg              sync.WaitGroup
 }
@@ -39,34 +34,19 @@ type statusDetail struct {
 	errorMsg  string
 }
 
-func NewWatcher(cli *k8sclient.Client, cfg *Config) (*Watcher, error) {
-	evaluateClient, err := rpcclient.NewEvaluateClient(cfg.EvaluateEndpoint)
-	if err != nil {
-		return nil, fmt.Errorf("new evaluate rpc client error: %s", err.Error())
-	}
-
-	inferenceClient, err := rpcclient.NewInferenceClient(cfg.InferenceEndpoint)
-	if err != nil {
-		return nil, fmt.Errorf("new evaluate rpc client error: %s", err.Error())
-	}
-
-	w := &Watcher{
-		cli:             cli,
-		stop:            make(chan struct{}),
-		evaluateClient:  evaluateClient,
-		inferenceClient: inferenceClient,
+func NewWatcher(
+	cli *k8sclient.Client,
+	handles map[string]func(map[string]string, domain.ContainerDetail),
+) *Watcher {
+	return &Watcher{
+		cli:     cli,
+		stop:    make(chan struct{}),
+		handles: handles,
 		podNamePrifixes: []string{
 			inferenceimpl.MetaName(),
 			evaluateimpl.MetaName(),
 		},
 	}
-
-	w.handles = map[string]func(map[string]string, statusDetail){
-		inferenceimpl.MetaName(): w.handleInference,
-		evaluateimpl.MetaName():  w.handleEvaluate,
-	}
-
-	return w, nil
 }
 
 func (w *Watcher) Run() {
@@ -147,7 +127,7 @@ func (w *Watcher) checkCRD(res v1.CodeServer) {
 	}
 
 	if endPoint != "" {
-		h(res.ObjectMeta.Labels, statusDetail{accessUrl: endPoint})
+		h(res.ObjectMeta.Labels, domain.ContainerDetail{AccessUrl: endPoint})
 
 		w.updateCRDBoundStatus(&res)
 	}
@@ -215,56 +195,6 @@ func (w *Watcher) checkCRDStatus(res *v1.CodeServer) (recycled bool, endPoint st
 	}
 
 	return
-}
-
-func (w *Watcher) handleInference(labels map[string]string, status statusDetail) {
-	index := inference.InferenceIndex{
-		Id:         labels["id"],
-		User:       labels["user"],
-		ProjectId:  labels["project_id"],
-		LastCommit: labels["last_commit"],
-	}
-
-	info := inference.InferenceInfo{
-		Error:     status.errorMsg,
-		AccessURL: status.accessUrl,
-	}
-
-	err := w.inferenceClient.SetInferenceInfo(&index, &info)
-	if err != nil {
-		logrus.Errorf("call inference rpc error:%s", err.Error())
-	} else {
-		logrus.Debugf(
-			"call rpc to set inference(%s/%s/%s/%s) info:(%s/%s)",
-			index.User, index.ProjectId, index.LastCommit, index.Id,
-			info.Error, info.AccessURL,
-		)
-
-	}
-}
-
-func (w *Watcher) handleEvaluate(labels map[string]string, status statusDetail) {
-	index := evaluate.EvaluateIndex{
-		Id:         labels["id"],
-		User:       labels["user"],
-		ProjectId:  labels["project_id"],
-		TrainingID: labels["training_id"],
-	}
-	info := evaluate.EvaluateInfo{
-		Error:     status.errorMsg,
-		AccessURL: status.accessUrl,
-	}
-
-	err := w.evaluateClient.SetEvaluateInfo(&index, &info)
-	if err != nil {
-		logrus.Errorf("call evaluate rpc error: %s", err.Error())
-	} else {
-		logrus.Debugf(
-			"call rpc to set evaluate(%s/%s/%s/%s) info:(%s/%s)",
-			index.User, index.ProjectId, index.TrainingID, index.Id,
-			info.Error, info.AccessURL,
-		)
-	}
 }
 
 func (w *Watcher) crdConfig() cache.SharedIndexInformer {

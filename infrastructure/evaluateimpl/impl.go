@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
+	"strings"
 
+	rpcclient "github.com/opensourceways/xihe-grpc-protocol/grpc/client"
+	rpcevaluate "github.com/opensourceways/xihe-grpc-protocol/grpc/evaluate"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
@@ -15,7 +18,13 @@ import (
 	"github.com/opensourceways/xihe-inference-evaluate/k8sclient"
 )
 
-const metaNameEvaluate = "evaluate"
+const (
+	keyId            = "id"
+	keyUser          = "user"
+	keyProjectId     = "project_id"
+	keyTrainingId    = "training_id"
+	metaNameEvaluate = "evaluate"
+)
 
 func MetaName() string {
 	return metaNameEvaluate
@@ -32,9 +41,15 @@ func NewEvaluate(cli *k8sclient.Client, cfg *Config, k8sConfig k8sclient.Config)
 		return nil, err
 	}
 
+	rpccli, err := rpcclient.NewEvaluateClient(cfg.RPCEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("new evaluate rpc client error: %s", err.Error())
+	}
+
 	return &evaluateImpl{
 		cfg:         cfg,
 		cli:         cli,
+		rpccli:      rpccli,
 		k8sConfig:   k8sConfig,
 		crdTemplate: tmpl,
 	}, nil
@@ -43,6 +58,7 @@ func NewEvaluate(cli *k8sclient.Client, cfg *Config, k8sConfig k8sclient.Config)
 type evaluateImpl struct {
 	cfg         *Config
 	cli         *k8sclient.Client
+	rpccli      *rpcclient.EvaluateClient
 	k8sConfig   k8sclient.Config
 	crdTemplate *template.Template
 }
@@ -95,17 +111,41 @@ func (impl *evaluateImpl) CreateStandard(se *domain.StandardEvaluate) error {
 	return err
 }
 
+func (impl *evaluateImpl) NotifyResult(labels map[string]string, status domain.ContainerDetail) {
+	index := rpcevaluate.EvaluateIndex{
+		Id:         labels[keyId],
+		User:       strings.TrimPrefix(labels[keyUser], keyUser),
+		ProjectId:  labels[keyProjectId],
+		TrainingID: labels[keyTrainingId],
+	}
+	info := rpcevaluate.EvaluateInfo{
+		Error:     status.ErrorMsg,
+		AccessURL: status.AccessUrl,
+	}
+
+	err := impl.rpccli.SetEvaluateInfo(&index, &info)
+	if err != nil {
+		logrus.Errorf("call evaluate rpc error: %s", err.Error())
+	} else {
+		logrus.Debugf(
+			"call rpc to set evaluate(%s/%s/%s/%s) info:(%s/%s)",
+			index.User, index.ProjectId, index.TrainingID, index.Id,
+			info.Error, info.AccessURL,
+		)
+	}
+}
+
 func (impl *evaluateImpl) geneMetaName(eva *domain.EvaluateIndex) string {
 	return fmt.Sprintf("%s-%s", metaNameEvaluate, eva.Id)
 }
 
 func (impl *evaluateImpl) geneLabels(eva *domain.EvaluateIndex) map[string]string {
 	return map[string]string{
-		"id":          eva.Id,
-		"user":        eva.Project.Owner.Account(),
-		"project_id":  eva.Project.Id,
-		"training_id": eva.TrainingId,
 		"type":        metaNameEvaluate,
+		keyId:         eva.Id,
+		keyUser:       eva.Project.Owner.Account(),
+		keyProjectId:  eva.Project.Id,
+		keyTrainingId: eva.TrainingId,
 	}
 }
 
